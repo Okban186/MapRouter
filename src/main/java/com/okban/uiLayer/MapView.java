@@ -80,6 +80,10 @@ public class MapView {
         this.routingLine = routingLine;
     }
 
+    public boolean getRoutingLine() {
+        return routingLine;
+    }
+
     public void setRoutingTiles(List<MapFeature>[][] routingTiles) {
         this.routingTiles = routingTiles;
     }

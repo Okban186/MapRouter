@@ -2,7 +2,6 @@ package com.okban.service;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.util.*;
 
 import org.openstreetmap.osmosis.core.container.v0_6.EntityContainer;
@@ -42,6 +41,7 @@ public class OsmFileLoadService {
             private List<GraphNode> nodeMap = new ArrayList<>();
             private int tileCell = (int) (mapView.worldWidth / mapView.TILE_WIDTH);
             private List<MapFeature>[][] tileIndex = new ArrayList[tileCell][tileCell];
+            private int edgeGroupIdCounter = 0;
 
             @Override
             protected OsmDataResult call() throws Exception {
@@ -83,6 +83,17 @@ public class OsmFileLoadService {
 
                                     Pair<Integer, Integer> pair = idMatching.get(wn.getNodeId());
                                     GraphNode n = nodeMap.get(pair.key);
+                                    // if ("10.9037199 106.84495220000001".equals(n.getLat() + " " + n.getLon())) {
+                                    // System.out.println(getTagValue(way, "highway"));
+                                    // for (WayNode we : way.getWayNodes()) {
+
+                                    // Pair<Integer, Integer> p = idMatching.get(we.getNodeId());
+                                    // GraphNode node = nodeMap.get(p.key);
+                                    // System.out.print(
+                                    // node.getLat() + " " + node.getLon() + " " + node.getID() + " -> ");
+                                    // }
+                                    // System.out.println();
+                                    // }
                                     pair.value = pair.value + 1;
                                     if (n != null) {
                                         geometry.add(n);
@@ -177,11 +188,13 @@ public class OsmFileLoadService {
 
                                                 prev = next;
                                             }
-                                            Edge edge1 = new Edge(selectedNode.getID(), cost, false, shapeNodeIds);
+                                            Edge edge1 = new Edge(selectedNode.getID(), cost, false, shapeNodeIds,
+                                                    edgeGroupIdCounter++);
                                             currentStart.getEdges().add(edge1);
 
                                             if (!oneway) {
-                                                Edge edge2 = new Edge(currentStart.getID(), cost, true, shapeNodeIds);
+                                                Edge edge2 = new Edge(currentStart.getID(), cost, true, shapeNodeIds,
+                                                        edgeGroupIdCounter++);
                                                 selectedNode.getEdges().add(edge2);
                                             }
 

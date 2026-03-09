@@ -33,7 +33,7 @@ public class RoutingFeature extends MapFeature {
 
         gc.beginPath();
         gc.setStroke(mainColor);
-        gc.setLineWidth(Math.min(base * zoom, 60));
+        gc.setLineWidth(Math.max(5, Math.min(base * zoom, 60)));
 
         for (int i = 0; i < geometry.size(); i++) {
 

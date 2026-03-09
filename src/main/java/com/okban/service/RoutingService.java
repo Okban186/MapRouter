@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.okban.algorithm.Dijkstra;
+import com.okban.dto.Pair;
 import com.okban.model.Edge;
 import com.okban.model.GraphNode;
 import com.okban.uiLayer.MapView;
@@ -14,11 +15,12 @@ import javafx.scene.paint.Color;
 
 public class RoutingService {
 
-    public List<Integer> getRoutingPath(GraphNode startNode, GraphNode endNode, int n, GraphNode[] graphNodes) {
+    public List<Pair<Integer, Integer>> getRoutingPath(GraphNode startNode, GraphNode endNode, int n,
+            GraphNode[] graphNodes) {
         return Dijkstra.compute(startNode, endNode, n, graphNodes);
     }
 
-    public List<MapFeature>[][] pathToTile(List<Integer> paths, MapView mapView) {
+    public List<MapFeature>[][] pathToTile(List<Pair<Integer, Integer>> paths, MapView mapView) {
         if (paths == null || paths.size() < 2)
             return null;
         int tileCell = (int) (mapView.worldWidth / mapView.TILE_WIDTH);
@@ -29,17 +31,18 @@ public class RoutingService {
         List<GraphNode> geo = new ArrayList<>();
 
         // thêm node đầu tiên
-        geo.add(graphNodes[paths.get(0)]);
+        geo.add(graphNodes[paths.get(0).getKey()]);
 
         for (int index = 0; index < paths.size() - 1; index++) {
 
-            int currentId = paths.get(index);
-            int nextId = paths.get(index + 1);
+            int currentId = paths.get(index).getKey();
+            int nextId = paths.get(index + 1).getKey();
+            int nextGroupId = paths.get(index + 1).getValue();
 
             GraphNode currentNode = graphNodes[currentId];
             for (Edge e : currentNode.getEdges()) {
 
-                if (e.getDesId() == nextId) {
+                if (e.getDesId() == nextId && e.getGroupId() == nextGroupId) {
 
                     int[] shapeNodeIds = e.getShapeNodeIds();
 

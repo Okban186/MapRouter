@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.List;
 
 import com.okban.dto.OsmDataResult;
+import com.okban.dto.Pair;
 import com.okban.model.GraphNode;
 import com.okban.service.OsmFileLoadService;
 import com.okban.service.RoutingService;
@@ -57,14 +58,23 @@ public class App extends Application {
             openPbfFile((Stage) root.getScene().getWindow());
         });
         Button finding = new Button("finding");
+        Button hideRoute = new Button("tooglehide");
+        hideRoute.setLayoutX(0);
+        hideRoute.setLayoutY(100);
+        hideRoute.setOnAction(e -> {
+            mapView.setRoutingLine(!mapView.getRoutingLine());
+        });
         finding.setOnAction(ed -> {
             GraphNode[] graphNodes = osmData.graphNodes;
+            // System.out.println(graphNodes[2180420].getLat() + " " +
+            // graphNodes[2180420].getLon());
             Task<List<MapFeature>[][]> task = new Task<>() {
 
                 @Override
                 protected List<MapFeature>[][] call() throws Exception {
-
-                    List<Integer> paths = routingService.getRoutingPath(
+                    // graphNodes[2180420],
+                    // graphNodes[2180607],
+                    List<Pair<Integer, Integer>> paths = routingService.getRoutingPath(
                             graphNodes[2180420],
                             graphNodes[2180607],
                             graphNodes.length,
@@ -88,7 +98,7 @@ public class App extends Application {
         osmFileLoadService = new OsmFileLoadService();
         routingService = new RoutingService();
         mapRoot = (Pane) mapView.createMapView();
-        root.getChildren().addAll(mapRoot, mmb, finding);
+        root.getChildren().addAll(mapRoot, mmb, finding, hideRoute);
         return root;
     }
 
