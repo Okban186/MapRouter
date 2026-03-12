@@ -6,11 +6,14 @@ import java.util.List;
 
 import com.okban.dto.OsmDataResult;
 import com.okban.dto.Pair;
+import com.okban.model.Edge;
 import com.okban.model.GraphNode;
+import com.okban.model.GraphStorage;
 import com.okban.service.OsmFileLoadService;
 import com.okban.service.RoutingService;
 import com.okban.uiLayer.MapView;
 import com.okban.uiLayer.Abstract.MapFeature;
+import com.okban.uiLayer.Implement.RoutingFeature;
 
 import javafx.application.Application;
 import javafx.concurrent.Task;
@@ -65,27 +68,25 @@ public class App extends Application {
             mapView.setRoutingLine(!mapView.getRoutingLine());
         });
         finding.setOnAction(ed -> {
-            GraphNode[] graphNodes = osmData.graphNodes;
+            GraphStorage graphStorage = osmData.graphStorage;
             // System.out.println(graphNodes[2180420].getLat() + " " +
             // graphNodes[2180420].getLon());
-            Task<List<MapFeature>[][]> task = new Task<>() {
+            Task<List<RoutingFeature>[][]> task = new Task<>() {
 
                 @Override
-                protected List<MapFeature>[][] call() throws Exception {
+                protected List<RoutingFeature>[][] call() throws Exception {
                     // graphNodes[2180420],
                     // graphNodes[2180607],
                     List<Pair<Integer, Integer>> paths = routingService.getRoutingPath(
-                            graphNodes[2180420],
-                            graphNodes[2180607],
-                            graphNodes.length,
-                            graphNodes);
+                            2180419,
+                            1546254, graphStorage);
 
                     return routingService.pathToTile(paths, mapView);
                 }
             };
 
             task.setOnSucceeded(e -> {
-                List<MapFeature>[][] routeIndexs = task.getValue();
+                List<RoutingFeature>[][] routeIndexs = task.getValue();
                 mapView.setRoutingLine(true);
                 mapView.setRoutingTiles(routeIndexs);
             });
@@ -117,10 +118,16 @@ public class App extends Application {
             osmData = task.getValue();
             mapView.onDataLoaded(osmData);
             mapView.repaint();
+            System.gc();
 
         });
 
-        task.setOnFailed(e -> System.out.println("FAILED"));
+        task.setOnFailed(e -> {
+            Throwable ex = task.getException();
+            System.out.println("Failed");
+            if (ex != null)
+                ex.printStackTrace();
+        });
     }
 
 }

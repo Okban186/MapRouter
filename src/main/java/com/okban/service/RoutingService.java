@@ -5,8 +5,8 @@ import java.util.List;
 
 import com.okban.algorithm.Dijkstra;
 import com.okban.dto.Pair;
-import com.okban.model.Edge;
-import com.okban.model.GraphNode;
+
+import com.okban.model.GraphStorage;
 import com.okban.uiLayer.MapView;
 import com.okban.uiLayer.Abstract.MapFeature;
 import com.okban.uiLayer.Implement.RoutingFeature;
@@ -15,67 +15,60 @@ import javafx.scene.paint.Color;
 
 public class RoutingService {
 
-    public List<Pair<Integer, Integer>> getRoutingPath(GraphNode startNode, GraphNode endNode, int n,
-            GraphNode[] graphNodes) {
-        return Dijkstra.compute(startNode, endNode, n, graphNodes);
+    public List<Pair<Integer, Integer>> getRoutingPath(int startIndex, int endIndex, GraphStorage graphStorage) {
+        return Dijkstra.compute(startIndex, endIndex, graphStorage);
     }
 
-    public List<MapFeature>[][] pathToTile(List<Pair<Integer, Integer>> paths, MapView mapView) {
+    public List<RoutingFeature>[][] pathToTile(List<Pair<Integer, Integer>> paths, MapView mapView) {
         if (paths == null || paths.size() < 2)
             return null;
         int tileCell = (int) (mapView.worldWidth / mapView.TILE_WIDTH);
-        List<MapFeature>[][] tileIndex = new ArrayList[tileCell][tileCell];
+        List<RoutingFeature>[][] tileIndex = new ArrayList[tileCell][tileCell];
 
-        GraphNode[] graphNodes = mapView.getGraphNodes();
+        GraphStorage graphStorage = mapView.getGraphStorage();
 
-        List<GraphNode> geo = new ArrayList<>();
+        List<Integer> geo = new ArrayList<>();
 
         // thêm node đầu tiên
-        geo.add(graphNodes[paths.get(0).getKey()]);
+        geo.add(paths.get(0).getKey());
 
         for (int index = 0; index < paths.size() - 1; index++) {
 
-            int currentId = paths.get(index).getKey();
+            // int currentId = paths.get(index).getKey();
             int nextId = paths.get(index + 1).getKey();
             int nextGroupId = paths.get(index + 1).getValue();
 
-            GraphNode currentNode = graphNodes[currentId];
-            for (Edge e : currentNode.getEdges()) {
+            int[] shapeNodeIds = graphStorage.getShapeNodeIds(nextGroupId);
 
-                if (e.getDesId() == nextId && e.getGroupId() == nextGroupId) {
+            if (shapeNodeIds.length > 0) {
 
-                    int[] shapeNodeIds = e.getShapeNodeIds();
-
-                    if (shapeNodeIds.length > 0) {
-
-                        if (!e.isReverse()) {
-                            for (int i = 0; i < shapeNodeIds.length; i++) {
-                                geo.add(graphNodes[shapeNodeIds[i]]);
-                            }
-                        } else {
-                            for (int i = shapeNodeIds.length - 1; i >= 0; i--) {
-                                geo.add(graphNodes[shapeNodeIds[i]]);
-                            }
-                        }
-
+                if (!graphStorage.isReverse(nextGroupId)) {
+                    for (int i = 0; i < shapeNodeIds.length; i++) {
+                        geo.add(shapeNodeIds[i]);
                     }
-
-                    // thêm node đích
-                    geo.add(graphNodes[nextId]);
-                    break;
+                } else {
+                    for (int i = shapeNodeIds.length - 1; i >= 0; i--) {
+                        geo.add(shapeNodeIds[i]);
+                    }
                 }
+
             }
+
+            geo.add(nextId);
+
         }
 
-        // tạo 1 RoutingFeature duy nhất
-        RoutingFeature routeFeature = new RoutingFeature(geo, 0, 0, null, Color.AQUA, 10);
+        RoutingFeature routeFeature = new RoutingFeature(0,
+                Color.AQUA,
+                10, mapView.getGraphStorage(), geo.stream().mapToInt(i -> i).toArray());
 
         insertIntoTiles(routeFeature, mapView, tileCell, tileIndex);
 
         return tileIndex;
     }
 
-    private void insertIntoTiles(MapFeature feature, MapView mapView, int tileCell, List<MapFeature>[][] tileIndex) {
+    private void insertIntoTiles(RoutingFeature feature, MapView mapView, int tileCell,
+            List<RoutingFeature>[][] tileIndex) {
 
         var box = feature.getBoundingBox();
 
@@ -83,7 +76,6 @@ public class RoutingService {
         int maxTileX = (int) (box.getMaxX() / mapView.TILE_WIDTH);
         int minTileY = (int) (box.getMinY() / mapView.TILE_HEIGHT);
         int maxTileY = (int) (box.getMaxY() / mapView.TILE_HEIGHT);
-
         minTileX = Math.max(0, minTileX);
         minTileY = Math.max(0, minTileY);
         maxTileX = Math.min(tileCell - 1, maxTileX);

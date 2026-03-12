@@ -5,62 +5,65 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.PriorityQueue;
 
 import com.okban.dto.Pair;
 import com.okban.model.Edge;
 import com.okban.model.GraphNode;
+import com.okban.model.GraphStorage;
 
 public class Dijkstra {
 
-  public static List<Pair<Integer, Integer>> compute(GraphNode startNode, GraphNode endNode, int n,
-      GraphNode[] graphNodes) {
-
+  public static List<Pair<Integer, Integer>> compute(int startIndex, int endIndex, GraphStorage graphStorage) {
     PriorityQueue<Pair<Integer, Double>> open = new PriorityQueue<>(Comparator.comparingDouble(Pair::getValue));
-
+    int n = graphStorage.getNodeCount();
     double[] costs = new double[n];
+    Map<Integer, List<Integer>> edgeCaches = new HashMap<>();
     int[] parent = new int[n];
     int[] parentEdge = new int[n];
     Arrays.fill(parent, -1);
-
+    Arrays.fill(costs, -1);
     BitSet close = new BitSet(n);
 
-    open.add(new Pair<Integer, Double>(startNode.getID(), 0.0));
-    costs[(int) startNode.getID()] = 0.0;
+    open.add(new Pair<Integer, Double>(startIndex, 0.0));
+    costs[startIndex] = 0.0;
 
     while (!open.isEmpty()) {
 
       Pair<Integer, Double> current = open.poll();
-      GraphNode currentNode = graphNodes[current.key];
+      int currentIndex = current.key;
       double currentCost = current.value;
 
-      if (close.get(currentNode.getID()))
+      if (close.get(currentIndex))
         continue;
 
-      close.set(currentNode.getID(), true);
+      close.set(currentIndex, true);
 
-      if (currentNode.getID() == endNode.getID()) {
-        return buildPath(parent, parentEdge, startNode.getID(), endNode.getID(),
-            costs[endNode.getID()], graphNodes);
+      if (currentIndex == endIndex) {
+        return buildPath(parent, parentEdge, startIndex, endIndex,
+            costs[endIndex], graphStorage);
       }
 
-      for (Edge e : currentNode.getEdges()) {
-
-        if (close.get(e.getDesId()))
+      for (Integer eIdObj : graphStorage.edgesFromIterable(currentIndex)) {
+        int eId = eIdObj;
+        int selectedIndex = graphStorage.getEdgeDes(eId);
+        if (close.get(selectedIndex))
           continue;
 
-        double newCost = currentCost + e.getCost();
-        Double oldCost = costs[e.getDesId()];
+        double newCost = currentCost + graphStorage.getEdgeCost(eId);
+        Double oldCost = costs[selectedIndex];
 
-        if (oldCost == 0 || newCost < oldCost) {
+        if (oldCost == -1 || newCost < oldCost) {
 
-          costs[e.getDesId()] = newCost;
+          costs[selectedIndex] = newCost;
 
-          parent[e.getDesId()] = currentNode.getID();
-          parentEdge[e.getDesId()] = e.getGroupId();
+          parent[selectedIndex] = currentIndex;
+          parentEdge[selectedIndex] = eId;
 
-          open.add(new Pair<Integer, Double>(e.getDesId(), newCost));
+          open.add(new Pair<Integer, Double>(selectedIndex, newCost));
         }
       }
 
@@ -71,7 +74,7 @@ public class Dijkstra {
 
   private static List<Pair<Integer, Integer>> buildPath(int[] parent, int parentEdge[],
       int start,
-      int end, double cost, GraphNode[] graphNodes) {
+      int end, double cost, GraphStorage graphStorage) {
 
     List<Pair<Integer, Integer>> path = new ArrayList<>();
     int cur = end;

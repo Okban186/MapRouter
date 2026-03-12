@@ -7,6 +7,7 @@ import org.openstreetmap.osmosis.core.domain.v0_6.Tag;
 
 import com.okban.dto.OsmNode;
 import com.okban.model.GraphNode;
+import com.okban.model.GraphStorage;
 import com.okban.uiLayer.Abstract.MapFeature;
 
 import javafx.scene.canvas.GraphicsContext;
@@ -16,30 +17,30 @@ import javafx.scene.text.Font;
 public class RoadFeature extends MapFeature {
     private double base;
 
-    public RoadFeature(List<GraphNode> geometry, int minLOD, double base, int layer, Collection<Tag> tags) {
-        super(geometry, minLOD, layer, tags);
+    public RoadFeature(int segmentOffset, int segmentLen, int minLOD, double base, int layer, Collection<Tag> tags,
+            GraphStorage graphStorage) {
+        super(segmentOffset, segmentLen, minLOD, layer, tags, graphStorage);
         this.base = base;
 
     }
 
     @Override
-    public void draw(GraphicsContext gc, double cameraX, double cameraY, double zoom) {
-        if (geometry.size() < 2)
+    public void draw(GraphicsContext gc, double cameraX, double cameraY, double zoom, GraphStorage graphStorage) {
+        if (segmentLen < 2)
             return;
         boolean firstPoint = true;
         double lastX = 0;
         double lastY = 0;
 
+        gc.save();
         gc.beginPath();
         gc.setStroke(Color.DARKGREY);
         gc.setLineWidth(Math.min(base * zoom, 60));
+        int shapeNodes[] = graphStorage.getShapeNodes();
+        for (int i = segmentOffset; i < segmentLen + segmentOffset; i++) {
 
-        for (int i = 0; i < geometry.size(); i++) {
-
-            GraphNode n = geometry.get(i);
-
-            double screenX = (n.getX() - cameraX) * zoom;
-            double screenY = (n.getY() - cameraY) * zoom;
+            double screenX = (graphStorage.getNodeX(shapeNodes[i]) - cameraX) * zoom;
+            double screenY = (graphStorage.getNodeY(shapeNodes[i]) - cameraY) * zoom;
 
             double dx = screenX - lastX;
             double dy = screenY - lastY;
@@ -64,35 +65,45 @@ public class RoadFeature extends MapFeature {
     }
 
     @Override
-    public void drawLabel(GraphicsContext gc, double cameraX, double cameraY, double zoom) {
+    public void drawLabel(GraphicsContext gc, double cameraX, double cameraY, double zoom, GraphStorage graphStorage) {
         String name = getTagValue("name");
         if (name != null && zoom > 2) {
             gc.setLineWidth(1);
             gc.setStroke(Color.BLACK);
             double maxLength = 0;
-            GraphNode bestA = null;
-            GraphNode bestB = null;
+
+            int bestAIndex = -1;
+            int bestBIndex = -1;
             boolean flipped = false;
-            for (int i = 0; i < geometry.size() - 1; i++) {
+            int shapeNodes[] = graphStorage.getShapeNodes();
+            for (int i = segmentOffset; i < segmentLen + segmentOffset - 1; i++) {
 
-                GraphNode a = geometry.get(i);
-                GraphNode b = geometry.get(i + 1);
+                int aIndex = shapeNodes[i];
+                int bIndex = shapeNodes[i + 1];
 
-                double dx = b.getX() - a.getX();
-                double dy = b.getY() - a.getY();
+                double dx = graphStorage.getNodeX(bIndex) - graphStorage.getNodeX(aIndex);
+                double dy = graphStorage.getNodeY(bIndex) - graphStorage.getNodeY(aIndex);
 
                 double len = dx * dx + dy * dy;
 
                 if (len > maxLength) {
                     maxLength = len;
-                    bestA = a;
-                    bestB = b;
+                    bestAIndex = aIndex;
+                    bestBIndex = bIndex;
                 }
             }
-            double x = (bestA.getX() + bestB.getX()) / 2;
-            double y = (bestA.getY() + bestB.getY()) / 2;
-            double dx = bestB.getX() - bestA.getX();
-            double dy = bestB.getY() - bestA.getY();
+            if (bestAIndex < 0 || bestBIndex < 0)
+                return;
+
+            double ax = graphStorage.getNodeX(bestAIndex);
+            double ay = graphStorage.getNodeY(bestAIndex);
+            double bx = graphStorage.getNodeX(bestBIndex);
+            double by = graphStorage.getNodeY(bestBIndex);
+
+            double x = (ax + bx) / 2;
+            double y = (ay + by) / 2;
+            double dx = bx - ax;
+            double dy = by - ay;
 
             double angle = Math.toDegrees(Math.atan2(dy, dx));
 

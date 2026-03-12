@@ -6,6 +6,7 @@ import java.util.List;
 import org.openstreetmap.osmosis.core.domain.v0_6.Tag;
 
 import com.okban.model.GraphNode;
+import com.okban.model.GraphStorage;
 import com.okban.uiLayer.Abstract.MapFeature;
 
 import javafx.scene.canvas.GraphicsContext;
@@ -14,26 +15,26 @@ import javafx.scene.text.Font;
 
 public class BuildingFeature extends MapFeature {
 
-    public BuildingFeature(List<GraphNode> geometry, int minLOD, int layer, Collection<Tag> tags) {
-        super(geometry, minLOD, layer, tags);
+    public BuildingFeature(int segmentOffset, int segmentLen, int minLOD, int layer, Collection<Tag> tags,
+            GraphStorage graphStorage) {
+        super(segmentOffset, segmentLen, minLOD, layer, tags, graphStorage);
 
     }
 
     @Override
-    public void draw(GraphicsContext gc, double cameraX, double cameraY, double zoom) {
+    public void draw(GraphicsContext gc, double cameraX, double cameraY, double zoom, GraphStorage graphStorage) {
 
         boolean firstPoint = true;
         double lastX = 0;
         double lastY = 0;
         gc.setLineWidth(1);
         gc.beginPath();
+        int[] shapeNodes = graphStorage.getShapeNodes();
 
-        for (int i = 0; i < geometry.size(); i++) {
+        for (int i = segmentOffset; i < segmentLen + segmentOffset; i++) {
 
-            GraphNode n = geometry.get(i);
-
-            double screenX = (n.getX() - cameraX) * zoom;
-            double screenY = (n.getY() - cameraY) * zoom;
+            double screenX = (graphStorage.getNodeX(shapeNodes[i]) - cameraX) * zoom;
+            double screenY = (graphStorage.getNodeY(shapeNodes[i]) - cameraY) * zoom;
 
             double dx = screenX - lastX;
             double dy = screenY - lastY;
@@ -63,34 +64,41 @@ public class BuildingFeature extends MapFeature {
     }
 
     @Override
-    public void drawLabel(GraphicsContext gc, double cameraX, double cameraY, double zoom) {
+    public void drawLabel(GraphicsContext gc, double cameraX, double cameraY, double zoom, GraphStorage graphStorage) {
         String name = getTagValue("name");
         if (name != null && zoom > 2) {
-
+            gc.setLineWidth(1);
+            gc.setStroke(Color.BLACK);
             double maxLength = 0;
-            GraphNode bestA = null;
-            GraphNode bestB = null;
 
-            for (int i = 0; i < geometry.size() - 1; i++) {
+            int bestAIndex = -1;
+            int bestBIndex = -1;
+            int shapeNodes[] = graphStorage.getShapeNodes();
+            for (int i = segmentOffset; i < segmentLen + segmentOffset - 1; i++) {
 
-                GraphNode a = geometry.get(i);
-                GraphNode b = geometry.get(i + 1);
+                int aIndex = shapeNodes[i];
+                int bIndex = shapeNodes[i + 1];
 
-                double dx = b.getX() - a.getX();
-                double dy = b.getY() - a.getY();
+                double dx = graphStorage.getNodeX(bIndex) - graphStorage.getNodeX(aIndex);
+                double dy = graphStorage.getNodeY(bIndex) - graphStorage.getNodeY(bIndex);
 
                 double len = dx * dx + dy * dy;
 
                 if (len > maxLength) {
                     maxLength = len;
-                    bestA = a;
-                    bestB = b;
+                    bestAIndex = aIndex;
+                    bestBIndex = bIndex;
                 }
             }
-            double x = (bestA.getX() + bestB.getX()) / 2;
-            double y = (bestA.getY() + bestB.getY()) / 2;
-            double dx = bestB.getX() - bestA.getX();
-            double dy = bestB.getY() - bestA.getY();
+            double ax = graphStorage.getNodeX(bestAIndex);
+            double ay = graphStorage.getNodeY(bestAIndex);
+            double bx = graphStorage.getNodeX(bestBIndex);
+            double by = graphStorage.getNodeY(bestBIndex);
+
+            double x = (ax + bx) / 2;
+            double y = (ay + by) / 2;
+            double dx = bx - ax;
+            double dy = by - by;
 
             double angle = Math.toDegrees(Math.atan2(dy, dx));
             if (angle > 90 || angle < -90) {

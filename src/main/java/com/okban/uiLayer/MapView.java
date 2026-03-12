@@ -4,7 +4,9 @@ import java.util.List;
 
 import com.okban.dto.OsmDataResult;
 import com.okban.model.GraphNode;
+import com.okban.model.GraphStorage;
 import com.okban.uiLayer.Abstract.MapFeature;
+import com.okban.uiLayer.Implement.RoutingFeature;
 
 import javafx.scene.Parent;
 import javafx.scene.canvas.Canvas;
@@ -35,7 +37,7 @@ public class MapView {
     private int tileCell;
     private int frameId;
     private boolean routingLine;
-    private List<MapFeature>[][] routingTiles;
+    private List<RoutingFeature>[][] routingTiles;
     private static final int MAX_FRAME_ID = 1000000;
 
     private OsmDataResult dataWrapper;
@@ -84,7 +86,7 @@ public class MapView {
         return routingLine;
     }
 
-    public void setRoutingTiles(List<MapFeature>[][] routingTiles) {
+    public void setRoutingTiles(List<RoutingFeature>[][] routingTiles) {
         this.routingTiles = routingTiles;
     }
 
@@ -95,12 +97,12 @@ public class MapView {
         // nodes.sort(Comparator.comparingInt(MapFeature::getLayer));
     }
 
-    public List<MapFeature>[][] getBucketMap() {
-        return dataWrapper.tileIndexs;
+    public GraphStorage getGraphStorage() {
+        return dataWrapper.graphStorage;
     }
 
-    public GraphNode[] getGraphNodes() {
-        return dataWrapper.graphNodes;
+    public List<MapFeature>[][] getBucketMap() {
+        return dataWrapper.tileIndexs;
     }
 
     public void repaint() {
@@ -136,8 +138,6 @@ public class MapView {
         for (int tx = minTileX; tx <= maxTileX; tx++) {
             for (int ty = minTileY; ty <= maxTileY; ty++) {
 
-                // long key = keyGeneration(tx, ty);
-
                 List<MapFeature> features = bucketMap[tx][ty];
                 if (features == null)
                     continue;
@@ -150,23 +150,24 @@ public class MapView {
                                 gc,
                                 cameraX,
                                 cameraY,
-                                zoom);
+                                zoom, getGraphStorage());
 
-                        feature.drawLabel(gcOverlay, cameraX, cameraY, zoom);
+                        feature.drawLabel(gcOverlay, cameraX, cameraY, zoom, getGraphStorage());
                     }
                 }
 
                 if (routingLine) {
-                    List<MapFeature> routes = routingTiles[tx][ty];
+                    List<RoutingFeature> routes = routingTiles[tx][ty];
                     if (routes == null)
                         continue;
-                    for (MapFeature route : routes) {
+                    for (RoutingFeature route : routes) {
                         if (route.getMinLOD() <= currentLOD && route.getLastDrawFrame() != frameId) {
                             route.setLastDrawFrame(frameId);
-                            route.draw(gcOverlay, cameraX, cameraY, zoom);
+                            route.draw(gcOverlay, cameraX, cameraY, zoom, getGraphStorage());
                         }
                     }
                 }
+
             }
         }
 

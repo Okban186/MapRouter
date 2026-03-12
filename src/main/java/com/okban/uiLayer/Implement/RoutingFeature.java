@@ -6,41 +6,67 @@ import java.util.List;
 import org.openstreetmap.osmosis.core.domain.v0_6.Tag;
 
 import com.okban.model.GraphNode;
+import com.okban.model.GraphStorage;
 import com.okban.uiLayer.Abstract.MapFeature;
 
+import javafx.geometry.BoundingBox;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
-public class RoutingFeature extends MapFeature {
+public class RoutingFeature {
 
     private Color mainColor;
     private int base;
+    private int[] geo;
+    protected int minLOD;
+    protected BoundingBox boundingBox;
+    protected int layer;
+    protected Collection<Tag> tags;
+    protected int lastDrawFrame = -1;
 
-    public RoutingFeature(List<GraphNode> geometry, int minLOD, int layer, Collection<Tag> tags, Color mainColor,
-            int base) {
-        super(geometry, minLOD, layer, tags);
+    public RoutingFeature(int minLOD, Color mainColor, int base, GraphStorage graphStorage, int[] geo) {
+        // super(segmentOffSet, segmentLen, minLOD, layer, tags, graphStorage);
         this.mainColor = mainColor;
         this.base = base;
+        this.geo = geo;
+        this.minLOD = minLOD;
+        this.base = base;
+        this.boundingBox = computeBoundingBox(graphStorage);
     }
 
-    @Override
-    public void draw(GraphicsContext gc, double cameraX, double cameraY, double zoom) {
-        if (geometry.size() < 2)
+    public int getLastDrawFrame() {
+        return lastDrawFrame;
+    }
+
+    public void setLastDrawFrame(int lastDrawFrame) {
+        this.lastDrawFrame = lastDrawFrame;
+    }
+
+    public BoundingBox getBoundingBox() {
+        return boundingBox;
+    }
+
+    public int getMinLOD() {
+        return minLOD;
+    }
+
+    public void draw(GraphicsContext gc, double cameraX, double cameraY, double zoom, GraphStorage graphStorage) {
+        if (geo.length < 2)
             return;
         boolean firstPoint = true;
         double lastX = 0;
         double lastY = 0;
 
+        // preserve GraphicsContext state to match the restore() at end
+        gc.save();
         gc.beginPath();
         gc.setStroke(mainColor);
         gc.setLineWidth(Math.max(5, Math.min(base * zoom, 60)));
+        // int[] shapeNodes = graphStorage.getShapeNodes();
+        for (int i = 0; i < geo.length; i++) {
 
-        for (int i = 0; i < geometry.size(); i++) {
-
-            GraphNode n = geometry.get(i);
-
-            double screenX = (n.getX() - cameraX) * zoom;
-            double screenY = (n.getY() - cameraY) * zoom;
+            double screenX = (graphStorage.getNodeX(geo[i]) - cameraX) * zoom;
+            double screenY = (graphStorage.getNodeY(geo[i]) - cameraY) * zoom;
 
             double dx = screenX - lastX;
             double dy = screenY - lastY;
@@ -64,9 +90,24 @@ public class RoutingFeature extends MapFeature {
         gc.restore();
     }
 
-    @Override
-    public void drawLabel(GraphicsContext gc, double cameraX, double cameraY, double zoom) {
+    public void drawLabel(GraphicsContext gc, double cameraX, double cameraY, double zoom, GraphStorage graphStorage) {
 
+    }
+
+    private BoundingBox computeBoundingBox(GraphStorage graphStorage) {
+        double minX = Double.MAX_VALUE;
+        double minY = Double.MAX_VALUE;
+        double maxX = -Double.MAX_VALUE;
+        double maxY = -Double.MAX_VALUE;
+
+        for (int index : geo) {
+            minX = Math.min(minX, graphStorage.getNodeX(index));
+            minY = Math.min(minY, graphStorage.getNodeY(index));
+            maxX = Math.max(maxX, graphStorage.getNodeX(index));
+            maxY = Math.max(maxY, graphStorage.getNodeY(index));
+        }
+
+        return new BoundingBox(minX, minY, maxX - minX, maxY - minY);
     }
 
 }
