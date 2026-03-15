@@ -6,13 +6,12 @@ import java.util.List;
 
 import com.okban.dto.OsmDataResult;
 import com.okban.dto.Pair;
-import com.okban.model.Edge;
-import com.okban.model.GraphNode;
+
 import com.okban.model.GraphStorage;
 import com.okban.service.OsmFileLoadService;
 import com.okban.service.RoutingService;
 import com.okban.uiLayer.MapView;
-import com.okban.uiLayer.Abstract.MapFeature;
+
 import com.okban.uiLayer.Implement.RoutingFeature;
 
 import javafx.application.Application;
