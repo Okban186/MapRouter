@@ -1,12 +1,9 @@
 package com.okban.uiLayer.Implement;
 
 import java.util.Collection;
-import java.util.List;
 
 import org.openstreetmap.osmosis.core.domain.v0_6.Tag;
 
-import com.okban.dto.OsmNode;
-import com.okban.model.GraphNode;
 import com.okban.model.GraphStorage;
 import com.okban.uiLayer.Abstract.MapFeature;
 
@@ -39,8 +36,8 @@ public class RoadFeature extends MapFeature {
         int shapeNodes[] = graphStorage.getShapeNodes();
         for (int i = segmentOffset; i < segmentLen + segmentOffset; i++) {
 
-            double screenX = (graphStorage.getNodeX(shapeNodes[i]) - cameraX) * zoom;
-            double screenY = (graphStorage.getNodeY(shapeNodes[i]) - cameraY) * zoom;
+            double screenX = (graphStorage.getNodeX(shapeNodes[i]) + 512 - cameraX) * zoom;
+            double screenY = (graphStorage.getNodeY(shapeNodes[i]) + 512 - cameraY) * zoom;
 
             double dx = screenX - lastX;
             double dy = screenY - lastY;
@@ -114,9 +111,12 @@ public class RoadFeature extends MapFeature {
             }
             gc.save();
 
+            double screenX = (x + 512 - cameraX) * zoom;
+            double screenY = (y + 512 - cameraY) * zoom;
+
             gc.translate(
-                    (x - cameraX) * zoom,
-                    (y - cameraY) * zoom);
+                    screenX,
+                    screenY);
 
             gc.rotate(angle);
             gc.setFont(Font.font(9));

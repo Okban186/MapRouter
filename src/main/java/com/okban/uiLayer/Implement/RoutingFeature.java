@@ -1,13 +1,10 @@
 package com.okban.uiLayer.Implement;
 
 import java.util.Collection;
-import java.util.List;
 
 import org.openstreetmap.osmosis.core.domain.v0_6.Tag;
 
-import com.okban.model.GraphNode;
 import com.okban.model.GraphStorage;
-import com.okban.uiLayer.Abstract.MapFeature;
 
 import javafx.geometry.BoundingBox;
 import javafx.scene.canvas.GraphicsContext;
@@ -57,7 +54,6 @@ public class RoutingFeature {
         double lastX = 0;
         double lastY = 0;
 
-        // preserve GraphicsContext state to match the restore() at end
         gc.save();
         gc.beginPath();
         gc.setStroke(mainColor);
@@ -65,8 +61,8 @@ public class RoutingFeature {
         // int[] shapeNodes = graphStorage.getShapeNodes();
         for (int i = 0; i < geo.length; i++) {
 
-            double screenX = (graphStorage.getNodeX(geo[i]) - cameraX) * zoom;
-            double screenY = (graphStorage.getNodeY(geo[i]) - cameraY) * zoom;
+            double screenX = (graphStorage.getNodeX(geo[i]) + 512 - cameraX) * zoom;
+            double screenY = (graphStorage.getNodeY(geo[i]) + 512 - cameraY) * zoom;
 
             double dx = screenX - lastX;
             double dy = screenY - lastY;

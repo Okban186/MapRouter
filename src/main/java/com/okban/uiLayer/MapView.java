@@ -3,7 +3,7 @@ package com.okban.uiLayer;
 import java.util.List;
 
 import com.okban.dto.OsmDataResult;
-import com.okban.model.GraphNode;
+
 import com.okban.model.GraphStorage;
 import com.okban.uiLayer.Abstract.MapFeature;
 import com.okban.uiLayer.Implement.RoutingFeature;
@@ -39,6 +39,10 @@ public class MapView {
     private boolean routingLine;
     private List<RoutingFeature>[][] routingTiles;
     private static final int MAX_FRAME_ID = 1000000;
+    private double BUFFER = 512 * 2;
+
+    private double dragAccumX = 0;
+    private double dragAccumY = 0;
 
     private OsmDataResult dataWrapper;
 
@@ -58,8 +62,17 @@ public class MapView {
         map.setPrefSize(ROOT_WIDTH, ROOT_HEIGHT);
         map.setBackground(new Background(new BackgroundFill(Color.LIGHTGREY, null, null)));
         overlay = new Pane();
-        lineConnect = new Canvas(ROOT_WIDTH, ROOT_HEIGHT);
-        lineOverlay = new Canvas(ROOT_WIDTH, ROOT_HEIGHT);
+        double canvasWidth = ROOT_WIDTH + BUFFER;
+        double canvasHeight = ROOT_HEIGHT + BUFFER;
+
+        lineConnect = new Canvas(canvasWidth, canvasHeight);
+        lineOverlay = new Canvas(canvasWidth, canvasHeight);
+
+        lineConnect.setTranslateX(-BUFFER / 2);
+        lineConnect.setTranslateY(-BUFFER / 2);
+
+        lineOverlay.setTranslateX(-BUFFER / 2);
+        lineOverlay.setTranslateY(-BUFFER / 2);
 
         map.getChildren().addAll(lineConnect, lineOverlay, overlay);
         mapEvent();
@@ -111,17 +124,17 @@ public class MapView {
             return;
 
         GraphicsContext gc = lineConnect.getGraphicsContext2D();
-        gc.clearRect(0, 0, ROOT_WIDTH, ROOT_HEIGHT);
+        gc.clearRect(0, 0, lineConnect.getWidth(), lineConnect.getHeight());
         GraphicsContext gcOverlay = lineOverlay.getGraphicsContext2D();
-        gcOverlay.clearRect(0, 0, ROOT_WIDTH, ROOT_HEIGHT);
+        gcOverlay.clearRect(0, 0, lineOverlay.getWidth(), lineOverlay.getHeight());
 
-        double viewWorldWidth = ROOT_WIDTH / zoom;
-        double viewWorldHeight = ROOT_HEIGHT / zoom;
+        double viewWorldWidth = (ROOT_WIDTH + BUFFER) / zoom;
+        double viewWorldHeight = (ROOT_HEIGHT + BUFFER) / zoom;
 
-        double minWorldX = cameraX;
-        double minWorldY = cameraY;
-        double maxWorldX = cameraX + viewWorldWidth;
-        double maxWorldY = cameraY + viewWorldHeight;
+        double minWorldX = cameraX - BUFFER / 2;
+        double minWorldY = cameraY - BUFFER / 2;
+        double maxWorldX = cameraX + viewWorldWidth + BUFFER / 2;
+        double maxWorldY = cameraY + viewWorldHeight + BUFFER / 2;
 
         int minTileX = (int) (minWorldX / TILE_WIDTH);
         int maxTileX = (int) (maxWorldX / TILE_WIDTH);
@@ -178,6 +191,7 @@ public class MapView {
         map.setOnMousePressed(e -> {
             lastMouseX = e.getX();
             lastMouseY = e.getY();
+
         });
 
         map.setOnMouseDragged(e -> {
@@ -185,13 +199,62 @@ public class MapView {
             double dx = e.getX() - lastMouseX;
             double dy = e.getY() - lastMouseY;
 
-            cameraX -= dx / zoom;
-            cameraY -= dy / zoom;
-
             lastMouseX = e.getX();
             lastMouseY = e.getY();
-            clampCamera();
-            repaint();
+
+            // double nextAccumX = dragAccumX + dx;
+            // double nextAccumY = dragAccumY + dy;
+
+            // double tempCameraX = cameraX - nextAccumX / zoom;
+            // double tempCameraY = cameraY - nextAccumY / zoom;
+
+            // double maxCameraX = worldWidth - (ROOT_WIDTH + BUFFER) / zoom;
+            // double maxCameraY = worldHeight - (ROOT_HEIGHT + BUFFER) / zoom;
+
+            // if (tempCameraX < 0 && dx > 0) {
+            // dx = 0;
+            // }
+
+            // if (tempCameraY < 0 && dy > 0) {
+            // dy = 0;
+            // }
+
+            // if (tempCameraX > maxCameraX && dx < 0) {
+            // dx = 0;
+            // }
+
+            // if (tempCameraY > maxCameraY && dy < 0) {
+            // dy = 0;
+            // }
+
+            lineConnect.setTranslateX(lineConnect.getTranslateX() + dx);
+            lineConnect.setTranslateY(lineConnect.getTranslateY() + dy);
+
+            lineOverlay.setTranslateX(lineOverlay.getTranslateX() + dx);
+            lineOverlay.setTranslateY(lineOverlay.getTranslateY() + dy);
+
+            dragAccumX += dx;
+            dragAccumY += dy;
+
+            if (Math.abs(dragAccumX) >= TILE_WIDTH ||
+                    Math.abs(dragAccumY) >= TILE_HEIGHT) {
+
+                cameraX -= dragAccumX / zoom;
+                cameraY -= dragAccumY / zoom;
+
+                clampCamera();
+
+                lineConnect.setTranslateX(-BUFFER / 2);
+                lineConnect.setTranslateY(-BUFFER / 2);
+
+                lineOverlay.setTranslateX(-BUFFER / 2);
+                lineOverlay.setTranslateY(-BUFFER / 2);
+
+                dragAccumX = 0;
+                dragAccumY = 0;
+
+                repaint();
+            }
         });
         map.setOnScroll(e -> {
 
@@ -211,40 +274,44 @@ public class MapView {
             zoomLevel = Math.max(-40, Math.min(zoomLevel, 40));
 
             double oldZoom = zoom;
-            updateZoom();
 
             double mouseX = e.getX();
             double mouseY = e.getY();
 
-            double worldXBefore = cameraX + mouseX / oldZoom;
-            double worldYBefore = cameraY + mouseY / oldZoom;
+            double worldXBefore = cameraX + (mouseX + BUFFER / 2) / oldZoom - BUFFER / 2;
+            double worldYBefore = cameraY + (mouseY + BUFFER / 2) / oldZoom - BUFFER / 2;
 
-            double worldXAfter = cameraX + mouseX / zoom;
-            double worldYAfter = cameraY + mouseY / zoom;
+            updateZoom();
+
+            double worldXAfter = cameraX + (mouseX + BUFFER / 2) / zoom - BUFFER / 2;
+            double worldYAfter = cameraY + (mouseY + BUFFER / 2) / zoom - BUFFER / 2;
 
             cameraX += worldXBefore - worldXAfter;
             cameraY += worldYBefore - worldYAfter;
 
             clampCamera();
+
             repaint();
         });
     }
 
     private void clampCamera() {
 
-        double viewWorldWidth = ROOT_WIDTH / zoom;
-        double viewWorldHeight = ROOT_HEIGHT / zoom;
+        double viewWorldWidth = (ROOT_WIDTH + BUFFER) / zoom;
+        double viewWorldHeight = (ROOT_HEIGHT + BUFFER) / zoom;
 
-        cameraX = Math.max(0, Math.min(cameraX, worldWidth - viewWorldWidth));
-        cameraY = Math.max(0, Math.min(cameraY, worldHeight - viewWorldHeight));
+        double minCameraX = Math.min(0, worldWidth - viewWorldWidth);
+        double maxCameraX = Math.max(0, worldWidth - viewWorldWidth);
+
+        double minCameraY = Math.min(0, worldHeight - viewWorldHeight);
+        double maxCameraY = Math.max(0, worldHeight - viewWorldHeight);
+
+        cameraX = Math.max(minCameraX, Math.min(cameraX, maxCameraX));
+        cameraY = Math.max(minCameraY, Math.min(cameraY, maxCameraY));
     }
 
     private void updateZoom() {
         zoom = Math.pow(1.08, zoomLevel);
-    }
-
-    private long keyGeneration(int k1, int k2) {
-        return ((long) k1 << 32) | (k2 & 0xffffffffL);
     }
 
     private int getLODLevel() {

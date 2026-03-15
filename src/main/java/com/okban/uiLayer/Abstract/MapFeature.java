@@ -1,11 +1,9 @@
 package com.okban.uiLayer.Abstract;
 
 import java.util.Collection;
-import java.util.List;
 
 import org.openstreetmap.osmosis.core.domain.v0_6.Tag;
 
-import com.okban.model.GraphNode;
 import com.okban.model.GraphStorage;
 
 import javafx.geometry.BoundingBox;

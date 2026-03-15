@@ -11,8 +11,6 @@ import org.openstreetmap.osmosis.core.task.v0_6.Sink;
 import com.okban.Enum.FeatureType;
 import com.okban.dto.OsmDataResult;
 import com.okban.dto.Pair;
-import com.okban.model.Edge;
-import com.okban.model.GraphNode;
 import com.okban.model.GraphStorage;
 import com.okban.uiLayer.MapView;
 import com.okban.uiLayer.Abstract.MapFeature;
