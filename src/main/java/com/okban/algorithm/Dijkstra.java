@@ -11,8 +11,6 @@ import java.util.Map;
 import java.util.PriorityQueue;
 
 import com.okban.dto.Pair;
-import com.okban.model.Edge;
-import com.okban.model.GraphNode;
 import com.okban.model.GraphStorage;
 
 public class Dijkstra {
@@ -21,7 +19,6 @@ public class Dijkstra {
     PriorityQueue<Pair<Integer, Double>> open = new PriorityQueue<>(Comparator.comparingDouble(Pair::getValue));
     int n = graphStorage.getNodeCount();
     double[] costs = new double[n];
-    Map<Integer, List<Integer>> edgeCaches = new HashMap<>();
     int[] parent = new int[n];
     int[] parentEdge = new int[n];
     Arrays.fill(parent, -1);

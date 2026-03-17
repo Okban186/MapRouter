@@ -49,6 +49,11 @@ public class OsmFileLoadService {
             private int maxTileXUsed = -1;
             private int maxTileYUsed = -1;
             private int currentEdgeCount = 0;
+            private int edgeSegmentTile = 256;
+            private int GRID_SEGMENT_SIZE = (int) (mapView.worldWidth / edgeSegmentTile);
+            private int[] tileSegmentOffsets = new int[GRID_SEGMENT_SIZE * GRID_SEGMENT_SIZE];
+            private int[] edgeSegmentTileCounts = new int[GRID_SEGMENT_SIZE * GRID_SEGMENT_SIZE];
+            private long[] tileSegmentIds;
 
             @Override
             protected OsmDataResult call() throws Exception {
@@ -229,6 +234,8 @@ public class OsmFileLoadService {
                                                 graphStorage.addEdge(startIndex, selectedIndex, cost, false,
                                                         shapeNodeIds);
                                                 // currentStart.getEdges().add(edge1);
+                                                if (getTagValue(way, "highway") != null)
+                                                    insertIntoEdgeSegmentCount(shapeNodeIds);
 
                                                 size += graphStorage.getShapeLength(graphStorage.getEdgeCount() - 1);
 
@@ -271,6 +278,8 @@ public class OsmFileLoadService {
                     });
 
                     reader2.run();
+                    prefixSumOffset();
+                    idk();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -292,8 +301,77 @@ public class OsmFileLoadService {
                 graphStorage.compact();
                 idMatching = null;
                 sparseTileIndex = null;
+                tileSegmentOffsets = null;
+                edgeSegmentTileCounts = null;
 
-                return new OsmDataResult(graphStorage, finalTileIndex);
+                return new OsmDataResult(graphStorage, finalTileIndex, tileSegmentIds);
+            }
+
+            private int getFlatTile(double dx, double dy) {
+
+                int tilex = (int) (dx / edgeSegmentTile);
+                int tileY = (int) (dy / edgeSegmentTile);
+
+                tilex = Math.max(0, Math.min(GRID_SEGMENT_SIZE - 1, tilex));
+                tileY = Math.max(0, Math.min(GRID_SEGMENT_SIZE - 1, tileY));
+
+                return tilex * GRID_SEGMENT_SIZE + tileY;
+            }
+
+            private void prefixSumOffset() {
+
+                int sum = 0;
+                for (int i = 0; i < GRID_SEGMENT_SIZE * GRID_SEGMENT_SIZE; i++) {
+                    tileSegmentOffsets[i] = sum;
+                    sum += edgeSegmentTileCounts[i];
+                }
+
+                tileSegmentIds = new long[sum];
+            }
+
+            private void insertIntoEdgeSegmentCount(int[] shapeNodeIds) {
+
+                for (int i = 0; i < shapeNodeIds.length - 1; i++) {
+
+                    int n1 = shapeNodeIds[i];
+                    int n2 = shapeNodeIds[i + 1];
+
+                    int tile1 = getFlatTile(graphStorage.getNodeX(n1), graphStorage.getNodeY(n1));
+                    int tile2 = getFlatTile(graphStorage.getNodeX(n2), graphStorage.getNodeY(n2));
+
+                    edgeSegmentTileCounts[tile1]++;
+                    if (tile2 != tile1)
+                        edgeSegmentTileCounts[tile2]++;
+
+                }
+            }
+
+            private void idk() {
+                System.out.println("Loi o day 3");
+                int[] shapeNodes = graphStorage.getShapeNodes();
+                for (int edgeIndex = 0; edgeIndex < graphStorage.getEdgeCount(); edgeIndex++) {
+                    if (graphStorage.isReverse(edgeIndex))
+                        continue;
+                    int offset = graphStorage.getShapeOffset(edgeIndex);
+                    int len = graphStorage.getShapeLen(edgeIndex);
+                    for (int i = offset; i < len - 1; i++) {
+                        long segmentId = (edgeIndex << 32) | i;
+
+                        int n1 = shapeNodes[offset];
+                        int n2 = shapeNodes[offset + 1];
+
+                        System.out.println("Loi o day");
+
+                        int tile1 = getFlatTile(graphStorage.getNodeX(n1), graphStorage.getNodeY(n1));
+                        int tile2 = getFlatTile(graphStorage.getNodeX(n2), graphStorage.getNodeY(n2));
+
+                        System.out.println(tile1 + " " + tile2);
+                        tileSegmentIds[tileSegmentOffsets[tile1]++] = segmentId;
+                        if (tile2 != tile1)
+                            tileSegmentIds[tileSegmentOffsets[tile2]++] = segmentId;
+                    }
+                }
+
             }
 
             private MapFeature createFeature(FeatureType type,

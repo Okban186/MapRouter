@@ -26,8 +26,8 @@ import javafx.stage.Stage;
 
 public class App extends Application {
 
-    private double ROOT_WIDTH = 1200;
-    private double ROOT_HEIGH = 800;
+    private double ROOT_WIDTH = 1366;
+    private double ROOT_HEIGH = 768;
     private AnchorPane root;
     private Pane mapRoot;
     private static Scene scene;
@@ -88,13 +88,14 @@ public class App extends Application {
                 List<RoutingFeature>[][] routeIndexs = task.getValue();
                 mapView.setRoutingLine(true);
                 mapView.setRoutingTiles(routeIndexs);
+                mapView.repaint();
             });
 
             new Thread(task).start();
         });
         finding.setLayoutX(0);
         finding.setLayoutY(50);
-        mapView = new MapView(1200, 800);
+        mapView = new MapView(1366, 768);
         osmFileLoadService = new OsmFileLoadService();
         routingService = new RoutingService();
         mapRoot = (Pane) mapView.createMapView();

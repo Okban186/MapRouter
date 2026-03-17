@@ -78,6 +78,10 @@ public class GraphStorage {
         return shapeOffSets[edgeIndex];
     }
 
+    public int getShapeLen(int edgeIndex) {
+        return shapeLengths[edgeIndex];
+    }
+
     public void addNode(double x, double y, double lon, double lat) {
         ensureNodeCapacity(nodeCount + 1);
         xs[nodeCount] = x;

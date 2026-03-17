@@ -254,12 +254,10 @@ public class MapView {
                 dragAccumY = 0;
 
                 repaint();
+
             }
         });
         map.setOnScroll(e -> {
-
-            if (!e.isControlDown())
-                return;
 
             scrollAccumulator += e.getDeltaY();
 
@@ -278,13 +276,19 @@ public class MapView {
             double mouseX = e.getX();
             double mouseY = e.getY();
 
-            double worldXBefore = cameraX + (mouseX + BUFFER / 2) / oldZoom - BUFFER / 2;
-            double worldYBefore = cameraY + (mouseY + BUFFER / 2) / oldZoom - BUFFER / 2;
+            // Van de la khi zoom thi cameraX, cameraY dich chuyen nhung canvas van o vi tri
+            // cu
+            // can tru them dragAccum boi vi khi camera bam theo map nhung canvas van o vi
+            // tri cu nen camera van can phan
+            // dich them dragAccum tuc la tinh tu vi tri -BUFFER/2 den translate hien tai
+
+            double worldXBefore = cameraX + (mouseX - dragAccumX + BUFFER / 2) / oldZoom - BUFFER / 2;
+            double worldYBefore = cameraY + (mouseY - dragAccumY + BUFFER / 2) / oldZoom - BUFFER / 2;
 
             updateZoom();
 
-            double worldXAfter = cameraX + (mouseX + BUFFER / 2) / zoom - BUFFER / 2;
-            double worldYAfter = cameraY + (mouseY + BUFFER / 2) / zoom - BUFFER / 2;
+            double worldXAfter = cameraX + (mouseX - dragAccumX + BUFFER / 2) / zoom - BUFFER / 2;
+            double worldYAfter = cameraY + (mouseY - dragAccumY + BUFFER / 2) / zoom - BUFFER / 2;
 
             cameraX += worldXBefore - worldXAfter;
             cameraY += worldYBefore - worldYAfter;
