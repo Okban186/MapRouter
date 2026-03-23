@@ -13,9 +13,10 @@ import javafx.scene.text.Font;
 
 public class BuildingFeature extends MapFeature {
 
-    public BuildingFeature(int segmentOffset, int segmentLen, int minLOD, int layer, Collection<Tag> tags,
+    public BuildingFeature(int segmentOffset, int segmentLen, int minLOD, int layer, double base, int wayflags,
+            String name,
             GraphStorage graphStorage) {
-        super(segmentOffset, segmentLen, minLOD, layer, tags, graphStorage);
+        super(segmentOffset, segmentLen, minLOD, layer, base, wayflags, name, graphStorage);
 
     }
 
@@ -25,7 +26,7 @@ public class BuildingFeature extends MapFeature {
         boolean firstPoint = true;
         double lastX = 0;
         double lastY = 0;
-        gc.setLineWidth(1);
+        gc.setLineWidth(base);
         gc.beginPath();
         int[] shapeNodes = graphStorage.getShapeNodes();
 
@@ -63,7 +64,7 @@ public class BuildingFeature extends MapFeature {
 
     @Override
     public void drawLabel(GraphicsContext gc, double cameraX, double cameraY, double zoom, GraphStorage graphStorage) {
-        String name = getTagValue("name");
+
         if (name != null && zoom > 2) {
             gc.setLineWidth(1);
             gc.setStroke(Color.BLACK);

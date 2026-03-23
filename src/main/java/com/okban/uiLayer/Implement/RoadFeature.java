@@ -12,12 +12,10 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 
 public class RoadFeature extends MapFeature {
-    private double base;
 
-    public RoadFeature(int segmentOffset, int segmentLen, int minLOD, double base, int layer, Collection<Tag> tags,
+    public RoadFeature(int segmentOffset, int segmentLen, int minLOD, double base, int layer, int wayflags, String name,
             GraphStorage graphStorage) {
-        super(segmentOffset, segmentLen, minLOD, layer, tags, graphStorage);
-        this.base = base;
+        super(segmentOffset, segmentLen, minLOD, layer, base, wayflags, name, graphStorage);
 
     }
 
@@ -63,7 +61,7 @@ public class RoadFeature extends MapFeature {
 
     @Override
     public void drawLabel(GraphicsContext gc, double cameraX, double cameraY, double zoom, GraphStorage graphStorage) {
-        String name = getTagValue("name");
+
         if (name != null && zoom > 2) {
             gc.setLineWidth(1);
             gc.setStroke(Color.BLACK);

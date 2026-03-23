@@ -2,12 +2,15 @@ package com.okban.uiLayer;
 
 import java.util.List;
 
+import com.okban.Enum.WayFlags;
 import com.okban.dto.OsmDataResult;
 
 import com.okban.model.GraphStorage;
+import com.okban.model.SnapResult;
 import com.okban.uiLayer.Abstract.MapFeature;
 import com.okban.uiLayer.Implement.RoutingFeature;
 
+import javafx.geometry.Point2D;
 import javafx.scene.Parent;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -40,7 +43,11 @@ public class MapView {
     private List<RoutingFeature>[][] routingTiles;
     private static final int MAX_FRAME_ID = 1000000;
     private double BUFFER = 512 * 2;
-
+    private boolean isDragg = false;
+    private double minLon = 106.30;
+    private double maxLon = 107.10;
+    private double minLat = 10.30;
+    private double maxLat = 11.20;
     private double dragAccumX = 0;
     private double dragAccumY = 0;
 
@@ -191,11 +198,13 @@ public class MapView {
         map.setOnMousePressed(e -> {
             lastMouseX = e.getX();
             lastMouseY = e.getY();
+            isDragg = false;
+            e.consume();
 
         });
 
         map.setOnMouseDragged(e -> {
-
+            isDragg = true;
             double dx = e.getX() - lastMouseX;
             double dy = e.getY() - lastMouseY;
 
@@ -256,6 +265,159 @@ public class MapView {
                 repaint();
 
             }
+
+            e.consume();
+        });
+
+        map.setOnMouseClicked(e -> {
+            if (isDragg)
+                return;
+
+            GraphicsContext g = lineOverlay.getGraphicsContext2D();
+            Point2D clicked = lineOverlay.sceneToLocal(e.getSceneX(), e.getSceneY());
+            double wx = (clicked.getX() / zoom) - 512 + cameraX;
+            double wy = (clicked.getY() / zoom) - 512 + cameraY;
+
+            // double xRatio = (node.getLongitude() - minLon) / (maxLon - minLon);
+            // double yRatio = (maxLat - node.getLatitude()) / (maxLat - minLat);
+
+            double xRatio = wx / worldWidth;
+            double yRatio = wy / worldHeight;
+
+            double wLon = xRatio * (maxLon - minLon) + minLon;
+            double wLat = (yRatio * (maxLat - minLat) - maxLat) * -1;
+
+            System.out.println(wLat + " " + wLon);
+
+            g.setFill(Color.RED);
+            g.fillOval(clicked.getX(), clicked.getY(), 2, 2);
+
+            double half = 256;
+            double minX = wx - half;
+            double minY = wy - half;
+            double maxX = wx + half;
+            double maxY = wy + half;
+
+            // System.out.println(wx / 256 + " " + wy / 256);
+
+            int minTileX = (int) Math.floor(minX / 512);
+            int maxTileX = (int) Math.floor(maxX / 512);
+
+            int minTileY = (int) Math.floor(minY / 512);
+            int maxTileY = (int) Math.floor(maxY / 512);
+
+            minTileX = Math.max(0, minTileX);
+            minTileY = Math.max(0, minTileY);
+            maxTileX = Math.min(tileCell - 1, maxTileX);
+            maxTileY = Math.min(tileCell - 1, maxTileY);
+
+            System.out.println(minTileX + " -> " + maxTileX + " " + minTileY + " -> " + maxTileY);
+
+            List<MapFeature>[][] tileIndexs = dataWrapper.tileIndexs;
+            GraphStorage graphStorage = getGraphStorage();
+            int shapeNodes[] = graphStorage.getShapeNodes();
+            for (int i = minTileX; i <= maxTileX; i++) {
+                for (int j = minTileY; j <= maxTileY; j++) {
+                    List<MapFeature> features = tileIndexs[i][j];
+                    if (features == null)
+                        continue;
+                    for (MapFeature feature : features) {
+
+                        if (feature.getMinLOD() >= 3)
+                            continue;
+                        int offset = feature.getSegmentOffSet();
+                        int len = feature.getSegmentLen();
+                        double threshold = Math.min(feature.getBase() * zoom, 60);
+                        // System.out.println(i + " " + j + " " + offset + " " + len + " " +
+                        // shapeNodes.length);
+
+                        int wayflags = feature.getWayflags();
+                        for (int index = offset; index < offset + len - 1; index++) {
+                            int aIndex = shapeNodes[index];
+                            int bIndex = shapeNodes[index + 1];
+
+                            double ax = graphStorage.getNodeX(aIndex);
+                            double ay = graphStorage.getNodeY(aIndex);
+                            double bx = graphStorage.getNodeX(bIndex);
+                            double by = graphStorage.getNodeY(bIndex);
+
+                            if (((Math.abs(bx - wx) > 256 || Math.abs(by - wy) > 256))
+                                    && (Math.abs(ax - wx) > 256 || Math.abs(ay - wy) > 256))
+                                continue;
+
+                            double abx = bx - ax;
+                            double aby = by - ay;
+
+                            double apx = wx - ax;
+                            double apy = wy - ay;
+
+                            double ab2 = abx * abx + aby * aby;
+
+                            if (ab2 == 0)
+                                continue;
+
+                            double t = (apx * abx + apy * aby) / ab2;
+
+                            if (t < 0 || t > 1)
+                                continue;
+
+                            double hx = ax + t * abx;
+                            double hy = ay + t * aby;
+
+                            double dx = wx - hx;
+                            double dy = wy - hy;
+
+                            double dist2 = dx * dx + dy * dy;
+
+                            if (dist2 * zoom <= threshold) {
+
+                                // System.out.println(dist2 + " " + graphStorage.getNodeLat(aIndex) + " "
+                                // + graphStorage.getNodeLon(aIndex) + " " + graphStorage.getNodeLat(bIndex) + "
+                                // "
+                                // + graphStorage.getNodeLon(bIndex));
+
+                                // double axv = (ax + 512 - cameraX) * zoom;
+                                // double ayv = (ay + 512 - cameraY) * zoom;
+
+                                // double bxv = (bx + 512 - cameraX) * zoom;
+                                // double byv = (by + 512 - cameraY) * zoom;
+                                // g.fillOval(axv, ayv, 4, 4);
+                                // g.fillOval(bxv, byv, 4, 4);
+                                // g.restore();
+
+                                SnapResult result = new SnapResult();
+                                if ((wayflags & WayFlags.ONEWAY.getValue()) != 0) {
+                                    double distB = haversineDistance(wLat, wLon, graphStorage.getNodeLat(bIndex),
+                                            graphStorage.getNodeLon(bIndex));
+                                    result.virtualNode(-1, bIndex, -1, distB, wx, wy, wayflags);
+                                    // System.out.println(graphStorage.getNodeLat(aIndex) + " " +
+                                    // graphStorage.getNodeLon(aIndex) + " " + graphStorage.getNodeLat(bIndex)
+                                    // + " " +
+                                    // graphStorage.getNodeLon(bIndex) + " " + -1 + " " + distB);
+                                    System.out.println(aIndex + " " + bIndex + " " + -1 + " " + distB);
+                                } else {
+                                    double distA = haversineDistance(wLat, wLon, graphStorage.getNodeLat(aIndex),
+                                            graphStorage.getNodeLon(aIndex));
+                                    double distB = haversineDistance(wLat, wLon, graphStorage.getNodeLat(bIndex),
+                                            graphStorage.getNodeLon(bIndex));
+                                    result.virtualNode(aIndex, bIndex, distA, distB, wx, wy, wayflags);
+                                    // System.out.println(graphStorage.getNodeLat(aIndex) + " " +
+                                    // graphStorage.getNodeLon(aIndex) + " " + graphStorage.getNodeLat(bIndex)
+                                    // + " " +
+                                    // graphStorage.getNodeLon(bIndex) + " " + distA + " " + distB);
+                                    // }
+                                    System.out.println(aIndex + " " + bIndex + " " + distA + " " + distB);
+
+                                }
+
+                                return;
+                            }
+
+                        }
+                    }
+                }
+            }
+
         });
         map.setOnScroll(e -> {
 
@@ -331,6 +493,24 @@ public class MapView {
 
     public void updateFrameId() {
         frameId = (frameId + 1) % MAX_FRAME_ID;
+    }
+
+    public static double haversineDistance(double lat1, double lon1, double lat2, double lon2) {
+        // Công thức Haversine
+        final double R = 6371000;
+
+        double phi1 = Math.toRadians(lat1);
+        double phi2 = Math.toRadians(lat2);
+        double dPhi = Math.toRadians(lat2 - lat1);
+        double dLambda = Math.toRadians(lon2 - lon1);
+
+        double a = Math.sin(dPhi / 2) * Math.sin(dPhi / 2)
+                + Math.cos(phi1) * Math.cos(phi2)
+                        * Math.sin(dLambda / 2) * Math.sin(dLambda / 2);
+
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return R * c;
     }
 
 }

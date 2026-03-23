@@ -12,10 +12,11 @@ import java.util.PriorityQueue;
 
 import com.okban.dto.Pair;
 import com.okban.model.GraphStorage;
+import com.okban.model.SnapResult;
 
 public class Dijkstra {
 
-  public static List<Pair<Integer, Integer>> compute(int startIndex, int endIndex, GraphStorage graphStorage) {
+  public static List<Pair<Integer, Integer>> compute(SnapResult start, SnapResult end, GraphStorage graphStorage) {
     PriorityQueue<Pair<Integer, Double>> open = new PriorityQueue<>(Comparator.comparingDouble(Pair::getValue));
     int n = graphStorage.getNodeCount();
     double[] costs = new double[n];
@@ -25,8 +26,10 @@ public class Dijkstra {
     Arrays.fill(costs, -1);
     BitSet close = new BitSet(n);
 
-    open.add(new Pair<Integer, Double>(startIndex, 0.0));
-    costs[startIndex] = 0.0;
+    open.add(new Pair<Integer, Double>(start.getNode1(), start.getDist1()));
+    open.add(new Pair<Integer, Double>(start.getNode2(), start.getDist2()));
+    costs[start.getNode1()] = start.getDist1();
+    costs[start.getNode2()] = start.getDist2();
 
     while (!open.isEmpty()) {
 
@@ -39,10 +42,24 @@ public class Dijkstra {
 
       close.set(currentIndex, true);
 
-      if (currentIndex == endIndex) {
-        return buildPath(parent, parentEdge, startIndex, endIndex,
-            costs[endIndex], graphStorage);
+      if (end.getDist1() == -1) {
+        if (currentIndex == end.getNode2()) {
+
+        }
+      } else {
+        if (currentIndex == end.getNode1()) {
+
+        }
+
+        if (currentIndex == end.getNode2()) {
+
+        }
       }
+
+      // if (currentIndex == end.getNode1()) {
+      // return buildPath(parent, parentEdge, startIndex, endIndex,
+      // costs[endIndex], graphStorage);
+      // }
 
       for (Integer eIdObj : graphStorage.edgesFromIterable(currentIndex)) {
         int eId = eIdObj;
@@ -67,6 +84,18 @@ public class Dijkstra {
     }
     return null;
 
+  }
+
+  public void test(int start, int end, int mid1, int mid2, int parent[]) {
+    List<Integer> path = new ArrayList<>();
+    int cur = end;
+    while (cur != -1) {
+      path.add(cur);
+      int next = parent[cur];
+      cur = next;
+    }
+
+    Collections.reverse(path);
   }
 
   private static List<Pair<Integer, Integer>> buildPath(int[] parent, int parentEdge[],

@@ -8,11 +8,9 @@ import com.okban.uiLayer.Abstract.MapFeature;
 public class OsmDataResult {
     public GraphStorage graphStorage;
     public List<MapFeature>[][] tileIndexs;
-    public long[] tileSegmentIds;
 
-    public OsmDataResult(GraphStorage graphStorage, List<MapFeature>[][] tileIndexs, long[] tileSegmentIds) {
+    public OsmDataResult(GraphStorage graphStorage, List<MapFeature>[][] tileIndexs) {
         this.graphStorage = graphStorage;
         this.tileIndexs = tileIndexs;
-        this.tileSegmentIds = tileSegmentIds;
     }
 }

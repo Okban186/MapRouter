@@ -77,8 +77,8 @@ public class App extends Application {
                     // graphNodes[2180420],
                     // graphNodes[2180607],
                     List<Pair<Integer, Integer>> paths = routingService.getRoutingPath(
-                            2180419,
-                            1546254, graphStorage);
+                            null,
+                            null, graphStorage);
 
                     return routingService.pathToTile(paths, mapView);
                 }

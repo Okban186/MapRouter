@@ -4,6 +4,7 @@ import java.util.Collection;
 
 import org.openstreetmap.osmosis.core.domain.v0_6.Tag;
 
+import com.okban.Enum.WayFlags;
 import com.okban.model.GraphStorage;
 
 import javafx.geometry.BoundingBox;
@@ -15,23 +16,44 @@ public abstract class MapFeature {
     // public int[] geometry;
     protected BoundingBox boundingBox;
     protected int layer;
-    protected Collection<Tag> tags;
+    // protected Collection<Tag> tags;
+    protected int wayflags;
     protected int lastDrawFrame = -1;
     protected int segmentOffset;
     protected int segmentLen;
+    protected double base;
+    protected String name;
 
-    public MapFeature(int segmentOffset, int segmentLen, int minLOD, int layer, Collection<Tag> tags,
+    public MapFeature(int segmentOffset, int segmentLen, int minLOD, int layer, double base, int wayflags, String name,
             GraphStorage graphStorage) {
         this.segmentOffset = segmentOffset;
         this.segmentLen = segmentLen;
         this.minLOD = minLOD;
         this.boundingBox = computeBoundingBox(graphStorage);
         this.layer = layer;
-        this.tags = tags;
+        this.base = base;
+        this.wayflags = wayflags;
+        this.name = name;
+    }
+
+    public double getBase() {
+        return base;
+    }
+
+    public int getWayflags() {
+        return wayflags;
     }
 
     public int getLayer() {
         return layer;
+    }
+
+    public int getSegmentOffSet() {
+        return segmentOffset;
+    }
+
+    public int getSegmentLen() {
+        return segmentLen;
     }
 
     public int getMinLOD() {
@@ -72,12 +94,12 @@ public abstract class MapFeature {
     public abstract void drawLabel(GraphicsContext gc, double cameraX, double cameraY, double zoom,
             GraphStorage graphStorage);
 
-    protected String getTagValue(String key) {
-        for (Tag t : tags) {
-            if (t.getKey().equals(key))
-                return t.getValue();
-        }
+    // protected String getTagValue(String key) {
+    // for (Tag t : tags) {
+    // if (t.getKey().equals(key))
+    // return t.getValue();
+    // }
 
-        return null;
-    }
+    // return null;
+    // }
 }

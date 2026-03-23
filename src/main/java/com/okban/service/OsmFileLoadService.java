@@ -9,6 +9,7 @@ import org.openstreetmap.osmosis.core.domain.v0_6.*;
 import org.openstreetmap.osmosis.core.task.v0_6.Sink;
 
 import com.okban.Enum.FeatureType;
+import com.okban.Enum.WayFlags;
 import com.okban.dto.OsmDataResult;
 import com.okban.dto.Pair;
 import com.okban.model.GraphStorage;
@@ -49,11 +50,13 @@ public class OsmFileLoadService {
             private int maxTileXUsed = -1;
             private int maxTileYUsed = -1;
             private int currentEdgeCount = 0;
-            private int edgeSegmentTile = 256;
-            private int GRID_SEGMENT_SIZE = (int) (mapView.worldWidth / edgeSegmentTile);
-            private int[] tileSegmentOffsets = new int[GRID_SEGMENT_SIZE * GRID_SEGMENT_SIZE];
-            private int[] edgeSegmentTileCounts = new int[GRID_SEGMENT_SIZE * GRID_SEGMENT_SIZE];
-            private long[] tileSegmentIds;
+            // private int edgeSegmentTile = 256;
+            // private int GRID_SEGMENT_SIZE = (int) (mapView.worldWidth / edgeSegmentTile);
+            // private int[] tileSegmentOffsets = new int[GRID_SEGMENT_SIZE *
+            // GRID_SEGMENT_SIZE];
+            // private int[] edgeSegmentTileCounts = new int[GRID_SEGMENT_SIZE *
+            // GRID_SEGMENT_SIZE];
+            // private long[] tileSegmentIds;
 
             @Override
             protected OsmDataResult call() throws Exception {
@@ -79,6 +82,8 @@ public class OsmFileLoadService {
 
                                     double worldX = xRatio * mapView.worldWidth;
                                     double worldY = yRatio * mapView.worldHeight;
+
+                                    // System.out.println(worldX + " " + worldY);
 
                                     graphStorage.addNode(worldX, worldY, node.getLongitude(), node.getLatitude());
 
@@ -170,13 +175,14 @@ public class OsmFileLoadService {
                                 if (entity.getType() == EntityType.Way) {
                                     Way way = (Way) entity;
                                     int size = 0;
-                                    if (getTagValue(way, "highway") != null || getTagValue(way, "building") != null) {
+                                    int wayflags = wayflagsBuild(way);
+                                    if ((wayflags & WayFlags.BUILDING.getValue()) != 0
+                                            || (wayflags & WayFlags.HIGHWAY.getValue()) != 0) {
 
                                         if (way.getWayNodes() == null || way.getWayNodes().isEmpty())
                                             return;
 
-                                        String value = getTagValue(way, "oneway");
-                                        boolean oneway = value != null && value.equals("yes");
+                                        boolean oneway = (wayflags & WayFlags.ONEWAY.getValue()) != 0;
 
                                         Pair<Integer, Integer> startPair = idMatching == null ? null
                                                 : idMatching.get(way.getWayNodes().get(0).getNodeId());
@@ -234,8 +240,6 @@ public class OsmFileLoadService {
                                                 graphStorage.addEdge(startIndex, selectedIndex, cost, false,
                                                         shapeNodeIds);
                                                 // currentStart.getEdges().add(edge1);
-                                                if (getTagValue(way, "highway") != null)
-                                                    insertIntoEdgeSegmentCount(shapeNodeIds);
 
                                                 size += graphStorage.getShapeLength(graphStorage.getEdgeCount() - 1);
 
@@ -257,7 +261,7 @@ public class OsmFileLoadService {
                                         MapFeature feature = createFeature(featureType,
                                                 graphStorage.getShapeOffset(currentEdgeCount),
                                                 size,
-                                                way);
+                                                way, wayflags);
 
                                         if (feature != null) {
 
@@ -278,8 +282,7 @@ public class OsmFileLoadService {
                     });
 
                     reader2.run();
-                    prefixSumOffset();
-                    idk();
+
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -301,82 +304,24 @@ public class OsmFileLoadService {
                 graphStorage.compact();
                 idMatching = null;
                 sparseTileIndex = null;
-                tileSegmentOffsets = null;
-                edgeSegmentTileCounts = null;
 
-                return new OsmDataResult(graphStorage, finalTileIndex, tileSegmentIds);
+                return new OsmDataResult(graphStorage, finalTileIndex);
             }
 
-            private int getFlatTile(double dx, double dy) {
+            // private int getFlatTile(double dx, double dy) {
 
-                int tilex = (int) (dx / edgeSegmentTile);
-                int tileY = (int) (dy / edgeSegmentTile);
+            // int tilex = (int) (dx / edgeSegmentTile);
+            // int tileY = (int) (dy / edgeSegmentTile);
 
-                tilex = Math.max(0, Math.min(GRID_SEGMENT_SIZE - 1, tilex));
-                tileY = Math.max(0, Math.min(GRID_SEGMENT_SIZE - 1, tileY));
+            // tilex = Math.max(0, Math.min(GRID_SEGMENT_SIZE - 1, tilex));
+            // tileY = Math.max(0, Math.min(GRID_SEGMENT_SIZE - 1, tileY));
 
-                return tilex * GRID_SEGMENT_SIZE + tileY;
-            }
-
-            private void prefixSumOffset() {
-
-                int sum = 0;
-                for (int i = 0; i < GRID_SEGMENT_SIZE * GRID_SEGMENT_SIZE; i++) {
-                    tileSegmentOffsets[i] = sum;
-                    sum += edgeSegmentTileCounts[i];
-                }
-
-                tileSegmentIds = new long[sum];
-            }
-
-            private void insertIntoEdgeSegmentCount(int[] shapeNodeIds) {
-
-                for (int i = 0; i < shapeNodeIds.length - 1; i++) {
-
-                    int n1 = shapeNodeIds[i];
-                    int n2 = shapeNodeIds[i + 1];
-
-                    int tile1 = getFlatTile(graphStorage.getNodeX(n1), graphStorage.getNodeY(n1));
-                    int tile2 = getFlatTile(graphStorage.getNodeX(n2), graphStorage.getNodeY(n2));
-
-                    edgeSegmentTileCounts[tile1]++;
-                    if (tile2 != tile1)
-                        edgeSegmentTileCounts[tile2]++;
-
-                }
-            }
-
-            private void idk() {
-                System.out.println("Loi o day 3");
-                int[] shapeNodes = graphStorage.getShapeNodes();
-                for (int edgeIndex = 0; edgeIndex < graphStorage.getEdgeCount(); edgeIndex++) {
-                    if (graphStorage.isReverse(edgeIndex))
-                        continue;
-                    int offset = graphStorage.getShapeOffset(edgeIndex);
-                    int len = graphStorage.getShapeLen(edgeIndex);
-                    for (int i = offset; i < len - 1; i++) {
-                        long segmentId = (edgeIndex << 32) | i;
-
-                        int n1 = shapeNodes[offset];
-                        int n2 = shapeNodes[offset + 1];
-
-                        System.out.println("Loi o day");
-
-                        int tile1 = getFlatTile(graphStorage.getNodeX(n1), graphStorage.getNodeY(n1));
-                        int tile2 = getFlatTile(graphStorage.getNodeX(n2), graphStorage.getNodeY(n2));
-
-                        System.out.println(tile1 + " " + tile2);
-                        tileSegmentIds[tileSegmentOffsets[tile1]++] = segmentId;
-                        if (tile2 != tile1)
-                            tileSegmentIds[tileSegmentOffsets[tile2]++] = segmentId;
-                    }
-                }
-
-            }
+            // return tilex * GRID_SEGMENT_SIZE + tileY;
+            // }
 
             private MapFeature createFeature(FeatureType type,
                     int segmentOffSet, int segmentLen,
-                    Way way) {
+                    Way way, int wayflags) {
 
                 int minLOD = classifyLOD(type, way);
 
@@ -385,10 +330,12 @@ public class OsmFileLoadService {
                     case ROAD:
                         return new RoadFeature(segmentOffSet, segmentLen, minLOD,
                                 getRoadWidth(getTagValue(way, "highway")), 3,
-                                way.getTags(), graphStorage);
+                                wayflags, getTagValue(way, "name"), graphStorage);
 
                     case BUILDING:
-                        return new BuildingFeature(segmentOffSet, segmentLen, minLOD, 2, way.getTags(), graphStorage);
+                        return new BuildingFeature(segmentOffSet, segmentLen, minLOD, 2, 1, wayflags,
+                                getTagValue(way, "name"),
+                                graphStorage);
 
                     // case WATER:
                     // return new WaterFeature(geometry, minLOD, estimateWidth(way), 0,
@@ -561,6 +508,23 @@ public class OsmFileLoadService {
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
         return R * c;
+    }
+
+    public int wayflagsBuild(Way way) {
+        int wayflags = 0;
+        for (Tag tag : way.getTags()) {
+            switch (tag.getKey()) {
+                case "highway":
+                    wayflags |= WayFlags.HIGHWAY.getValue();
+                case "oneway":
+                    if (tag.getValue().equals("yes"))
+                        wayflags |= WayFlags.ONEWAY.getValue();
+                case "building":
+                    wayflags |= WayFlags.BUILDING.getValue();
+            }
+        }
+
+        return wayflags;
     }
 
 }

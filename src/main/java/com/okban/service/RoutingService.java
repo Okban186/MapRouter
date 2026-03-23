@@ -7,6 +7,7 @@ import com.okban.algorithm.Dijkstra;
 import com.okban.dto.Pair;
 
 import com.okban.model.GraphStorage;
+import com.okban.model.SnapResult;
 import com.okban.uiLayer.MapView;
 import com.okban.uiLayer.Abstract.MapFeature;
 import com.okban.uiLayer.Implement.RoutingFeature;
@@ -15,8 +16,8 @@ import javafx.scene.paint.Color;
 
 public class RoutingService {
 
-    public List<Pair<Integer, Integer>> getRoutingPath(int startIndex, int endIndex, GraphStorage graphStorage) {
-        return Dijkstra.compute(startIndex, endIndex, graphStorage);
+    public List<Pair<Integer, Integer>> getRoutingPath(SnapResult start, SnapResult end, GraphStorage graphStorage) {
+        return Dijkstra.compute(start, end, graphStorage);
     }
 
     public List<RoutingFeature>[][] pathToTile(List<Pair<Integer, Integer>> paths, MapView mapView) {
