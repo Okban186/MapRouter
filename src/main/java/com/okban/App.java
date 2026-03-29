@@ -2,16 +2,21 @@ package com.okban;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.okban.dto.OsmDataResult;
 import com.okban.dto.Pair;
 
 import com.okban.model.GraphStorage;
+import com.okban.model.SnapContext;
 import com.okban.service.OsmFileLoadService;
 import com.okban.service.RoutingService;
+import com.okban.uiLayer.DataLoadingScreen;
 import com.okban.uiLayer.MapView;
-
+import com.okban.uiLayer.SelectedPlacesPane;
 import com.okban.uiLayer.Implement.RoutingFeature;
 
 import javafx.application.Application;
@@ -31,11 +36,14 @@ public class App extends Application {
     private AnchorPane root;
     private Pane mapRoot;
     private static Scene scene;
-    private String pinIconContent = "M1 0 A1 1 0 1 1 0.999 0 Z";
+
     private MapView mapView;
     private OsmFileLoadService osmFileLoadService;
     private RoutingService routingService;
     private OsmDataResult osmData;
+    private DataLoadingScreen loadingScreen;
+    private List<SnapContext> snapContexts;
+    private SelectedPlacesPane selectedPlacesPane;
 
     @Override
     public void start(Stage stage) throws IOException {
@@ -55,10 +63,16 @@ public class App extends Application {
     public Parent createContent() {
         root = new AnchorPane();
         root.setPrefSize(ROOT_WIDTH, ROOT_HEIGH);
-        Button mmb = new Button("mmb");
-        mmb.setOnAction(ed -> {
-            openPbfFile((Stage) root.getScene().getWindow());
-        });
+
+        loadingScreen = new DataLoadingScreen();
+        snapContexts = new ArrayList<>();
+        loadingScreen.createContent(ROOT_WIDTH, ROOT_HEIGH);
+
+        selectedPlacesPane = new SelectedPlacesPane(snapContexts);
+
+        selectedPlacesPane.setLayoutX(ROOT_WIDTH - selectedPlacesPane.getPrefWidth());
+        selectedPlacesPane.setLayoutY(0);
+
         Button finding = new Button("finding");
         Button hideRoute = new Button("tooglehide");
         hideRoute.setLayoutX(0);
@@ -68,27 +82,24 @@ public class App extends Application {
         });
         finding.setOnAction(ed -> {
             GraphStorage graphStorage = osmData.graphStorage;
-            // System.out.println(graphNodes[2180420].getLat() + " " +
-            // graphNodes[2180420].getLon());
-            Task<List<RoutingFeature>[][]> task = new Task<>() {
+
+            Task<RoutingFeature> task = new Task<>() {
 
                 @Override
-                protected List<RoutingFeature>[][] call() throws Exception {
-                    // graphNodes[2180420],
-                    // graphNodes[2180607],
-                    List<Pair<Integer, Integer>> paths = routingService.getRoutingPath(
-                            null,
-                            null, graphStorage);
+                protected RoutingFeature call() throws Exception {
 
-                    return routingService.pathToTile(paths, mapView);
+                    return routingService.GTS();
+
                 }
             };
 
             task.setOnSucceeded(e -> {
-                List<RoutingFeature>[][] routeIndexs = task.getValue();
+                RoutingFeature routingFeature = task.getValue();
                 mapView.setRoutingLine(true);
-                mapView.setRoutingTiles(routeIndexs);
+                mapView.setRoutingTiles(routingFeature);
+                System.gc();
                 mapView.repaint();
+
             });
 
             new Thread(task).start();
@@ -96,28 +107,41 @@ public class App extends Application {
         finding.setLayoutX(0);
         finding.setLayoutY(50);
         mapView = new MapView(1366, 768);
+        mapView.setOnPlaceMarker(item -> {
+            selectedPlacesPane.addPlace(item);
+        });
+
+        mapView.setSnapContext(snapContexts);
+
         osmFileLoadService = new OsmFileLoadService();
-        routingService = new RoutingService();
+        routingService = new RoutingService(snapContexts, mapView);
+
         mapRoot = (Pane) mapView.createMapView();
-        root.getChildren().addAll(mapRoot, mmb, finding, hideRoute);
+        root.getChildren().addAll(mapRoot, finding, hideRoute, selectedPlacesPane, loadingScreen.getRoot());//
+
+        openPbfFile();
         return root;
     }
 
-    public void openPbfFile(Stage stage) {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Map data save");
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Pbf file", "*.pbf"));
-        File file = fileChooser.showOpenDialog(root.getScene().getWindow());
-        if (file == null) {
-            System.out.println("No file selected");
-            return;
-        }
-        Task<OsmDataResult> task = osmFileLoadService.processPbfFile(file, mapView);
+    public void openPbfFile() {
 
+        String documentsDir = System.getenv("XDG_DOCUMENTS_DIR");
+
+        Path path;
+        if (documentsDir != null) {
+            path = Paths.get(documentsDir, "OsmData");
+        } else {
+            path = Paths.get(System.getProperty("user.home"), "Documents", "OsmData", "hcm.osm.pbf");
+        }
+
+        Task<OsmDataResult> task = osmFileLoadService.processPbfFile(path, mapView);
+        loadingScreen.loadTask(task);
         task.setOnSucceeded(e -> {
             osmData = task.getValue();
             mapView.onDataLoaded(osmData);
             mapView.repaint();
+            root.getChildren().removeLast();
+            routingService.setGraphStorage(osmData.graphStorage);
             System.gc();
 
         });

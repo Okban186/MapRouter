@@ -26,6 +26,7 @@ public class BuildingFeature extends MapFeature {
         boolean firstPoint = true;
         double lastX = 0;
         double lastY = 0;
+        gc.save();
         gc.setLineWidth(base);
         gc.beginPath();
         int[] shapeNodes = graphStorage.getShapeNodes();
@@ -59,6 +60,7 @@ public class BuildingFeature extends MapFeature {
 
         gc.setStroke(Color.DARKGRAY);
         gc.stroke();
+        gc.restore();
 
     }
 
@@ -66,6 +68,7 @@ public class BuildingFeature extends MapFeature {
     public void drawLabel(GraphicsContext gc, double cameraX, double cameraY, double zoom, GraphStorage graphStorage) {
 
         if (name != null && zoom > 2) {
+            gc.save();
             gc.setLineWidth(1);
             gc.setStroke(Color.BLACK);
             double maxLength = 0;

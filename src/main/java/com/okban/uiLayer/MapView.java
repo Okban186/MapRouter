@@ -1,12 +1,13 @@
 package com.okban.uiLayer;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 import com.okban.Enum.WayFlags;
 import com.okban.dto.OsmDataResult;
 
 import com.okban.model.GraphStorage;
-import com.okban.model.SnapResult;
+import com.okban.model.SnapContext;
 import com.okban.uiLayer.Abstract.MapFeature;
 import com.okban.uiLayer.Implement.RoutingFeature;
 
@@ -18,6 +19,8 @@ import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 
 public class MapView {
     private Pane map;
@@ -40,7 +43,7 @@ public class MapView {
     private int tileCell;
     private int frameId;
     private boolean routingLine;
-    private List<RoutingFeature>[][] routingTiles;
+    private RoutingFeature routingFeature;
     private static final int MAX_FRAME_ID = 1000000;
     private double BUFFER = 512 * 2;
     private boolean isDragg = false;
@@ -50,17 +53,26 @@ public class MapView {
     private double maxLat = 11.20;
     private double dragAccumX = 0;
     private double dragAccumY = 0;
+    private List<SnapContext> snapContexts;
 
     private OsmDataResult dataWrapper;
+
+    private Consumer<String> onPlaceMarker;
 
     public MapView(double ROOT_WIDTH, double ROOT_HEIGHT) {
         this.ROOT_WIDTH = ROOT_WIDTH;
         this.ROOT_HEIGHT = ROOT_HEIGHT;
         tileCell = (int) (worldWidth / TILE_WIDTH);
-        // this.TILE_WIDTH = ROOT_WIDTH;
-        // this.TILE_HEIGHT = ROOT_HEIGHT;
 
         updateZoom();
+    }
+
+    public void setSnapContext(List<SnapContext> snapContexts) {
+        this.snapContexts = snapContexts;
+    }
+
+    public void setOnPlaceMarker(Consumer<String> callback) {
+        this.onPlaceMarker = callback;
     }
 
     public Parent createMapView() {
@@ -106,15 +118,12 @@ public class MapView {
         return routingLine;
     }
 
-    public void setRoutingTiles(List<RoutingFeature>[][] routingTiles) {
-        this.routingTiles = routingTiles;
+    public void setRoutingTiles(RoutingFeature routingFeature) {
+        this.routingFeature = routingFeature;
     }
 
     public void onDataLoaded(OsmDataResult dataWrapper) {
         this.dataWrapper = dataWrapper;
-
-        // for (List<MapFeature> nodes : buckMap.values())
-        // nodes.sort(Comparator.comparingInt(MapFeature::getLayer));
     }
 
     public GraphStorage getGraphStorage() {
@@ -155,6 +164,45 @@ public class MapView {
 
         int currentLOD = getLODLevel();
 
+        if (routingLine) {
+            if (routingFeature != null) {
+
+                boolean intersect = minTileX <= routingFeature.getMaxTileX() &&
+                        maxTileX >= routingFeature.getMinTileX() &&
+                        minTileY <= routingFeature.getMaxTileY() &&
+                        maxTileY >= routingFeature.getMinTileY();
+                if (routingFeature.getMinLOD() <= currentLOD && routingFeature.getLastDrawFrame() != frameId
+                        && intersect) {
+                    routingFeature.setLastDrawFrame(frameId);
+                    routingFeature.draw(gcOverlay, cameraX, cameraY, zoom, getGraphStorage());
+
+                }
+            }
+        }
+        int number = 1;
+        for (SnapContext snap : snapContexts) {
+            if (routingLine)
+                break;
+            int tileX = (int) (snap.getX() / TILE_WIDTH);
+            int tileY = (int) (snap.getY() / TILE_HEIGHT);
+            if (tileX <= maxTileX && tileX >= minTileX && tileY >= minTileY && tileY <= maxTileY) {
+                double x = (snap.getX() + 512 - cameraX) * zoom;
+                double y = (snap.getY() + 512 - cameraY) * zoom;
+                gcOverlay.save();
+                gcOverlay.setFill(Color.RED);
+
+                gcOverlay.fillOval(x, y, 4, 4);
+                gcOverlay.restore();
+                gcOverlay.save();
+                gcOverlay.setFill(Color.RED); // màu khác
+                gcOverlay.setFont(Font.font("Arial", FontWeight.BOLD, 12));
+                gcOverlay.fillText(String.valueOf(number++), x - 4, y - 4);
+
+                gcOverlay.restore();
+            }
+
+        }
+
         for (int tx = minTileX; tx <= maxTileX; tx++) {
             for (int ty = minTileY; ty <= maxTileY; ty++) {
 
@@ -173,18 +221,6 @@ public class MapView {
                                 zoom, getGraphStorage());
 
                         feature.drawLabel(gcOverlay, cameraX, cameraY, zoom, getGraphStorage());
-                    }
-                }
-
-                if (routingLine) {
-                    List<RoutingFeature> routes = routingTiles[tx][ty];
-                    if (routes == null)
-                        continue;
-                    for (RoutingFeature route : routes) {
-                        if (route.getMinLOD() <= currentLOD && route.getLastDrawFrame() != frameId) {
-                            route.setLastDrawFrame(frameId);
-                            route.draw(gcOverlay, cameraX, cameraY, zoom, getGraphStorage());
-                        }
                     }
                 }
 
@@ -273,13 +309,12 @@ public class MapView {
             if (isDragg)
                 return;
 
-            GraphicsContext g = lineOverlay.getGraphicsContext2D();
             Point2D clicked = lineOverlay.sceneToLocal(e.getSceneX(), e.getSceneY());
             double wx = (clicked.getX() / zoom) - 512 + cameraX;
             double wy = (clicked.getY() / zoom) - 512 + cameraY;
-
-            // double xRatio = (node.getLongitude() - minLon) / (maxLon - minLon);
-            // double yRatio = (maxLat - node.getLatitude()) / (maxLat - minLat);
+            GraphicsContext g = lineOverlay.getGraphicsContext2D();
+            g.setFill(Color.RED);
+            g.fillOval(clicked.getX(), clicked.getY(), 4, 4);
 
             double xRatio = wx / worldWidth;
             double yRatio = wy / worldHeight;
@@ -287,18 +322,11 @@ public class MapView {
             double wLon = xRatio * (maxLon - minLon) + minLon;
             double wLat = (yRatio * (maxLat - minLat) - maxLat) * -1;
 
-            System.out.println(wLat + " " + wLon);
-
-            g.setFill(Color.RED);
-            g.fillOval(clicked.getX(), clicked.getY(), 2, 2);
-
             double half = 256;
             double minX = wx - half;
             double minY = wy - half;
             double maxX = wx + half;
             double maxY = wy + half;
-
-            // System.out.println(wx / 256 + " " + wy / 256);
 
             int minTileX = (int) Math.floor(minX / 512);
             int maxTileX = (int) Math.floor(maxX / 512);
@@ -310,8 +338,6 @@ public class MapView {
             minTileY = Math.max(0, minTileY);
             maxTileX = Math.min(tileCell - 1, maxTileX);
             maxTileY = Math.min(tileCell - 1, maxTileY);
-
-            System.out.println(minTileX + " -> " + maxTileX + " " + minTileY + " -> " + maxTileY);
 
             List<MapFeature>[][] tileIndexs = dataWrapper.tileIndexs;
             GraphStorage graphStorage = getGraphStorage();
@@ -328,8 +354,6 @@ public class MapView {
                         int offset = feature.getSegmentOffSet();
                         int len = feature.getSegmentLen();
                         double threshold = Math.min(feature.getBase() * zoom, 60);
-                        // System.out.println(i + " " + j + " " + offset + " " + len + " " +
-                        // shapeNodes.length);
 
                         int wayflags = feature.getWayflags();
                         for (int index = offset; index < offset + len - 1; index++) {
@@ -370,46 +394,60 @@ public class MapView {
                             double dist2 = dx * dx + dy * dy;
 
                             if (dist2 * zoom <= threshold) {
+                                if ((wayflags & WayFlags.FOOTWAY.getValue()) != 0)
+                                    break;
 
-                                // System.out.println(dist2 + " " + graphStorage.getNodeLat(aIndex) + " "
-                                // + graphStorage.getNodeLon(aIndex) + " " + graphStorage.getNodeLat(bIndex) + "
-                                // "
-                                // + graphStorage.getNodeLon(bIndex));
+                                double distA = 0;
+                                double distB = 0;
+                                int nearest1 = aIndex;
+                                int len1 = 0;
+                                int offset1 = index;
+                                distA += haversineDistance(wLat, wLon, graphStorage.getNodeLat(shapeNodes[offset1]),
+                                        graphStorage.getNodeLon(shapeNodes[offset1]));
+                                if (graphStorage.getHead(aIndex) == -1) {
+                                    int temp = offset1;
+                                    for (int ai = index - 1; ai >= offset; ai--) {
+                                        len1++;
+                                        distA += haversineDistance(graphStorage.getNodeLat(shapeNodes[temp]),
+                                                graphStorage.getNodeLon(shapeNodes[temp]),
+                                                graphStorage.getNodeLat(shapeNodes[ai]),
+                                                graphStorage.getNodeLon(shapeNodes[ai]));
+                                        temp = ai;
+                                        if (graphStorage.getHead(shapeNodes[ai]) != -1) {
+                                            aIndex = shapeNodes[ai];
 
-                                // double axv = (ax + 512 - cameraX) * zoom;
-                                // double ayv = (ay + 512 - cameraY) * zoom;
-
-                                // double bxv = (bx + 512 - cameraX) * zoom;
-                                // double byv = (by + 512 - cameraY) * zoom;
-                                // g.fillOval(axv, ayv, 4, 4);
-                                // g.fillOval(bxv, byv, 4, 4);
-                                // g.restore();
-
-                                SnapResult result = new SnapResult();
-                                if ((wayflags & WayFlags.ONEWAY.getValue()) != 0) {
-                                    double distB = haversineDistance(wLat, wLon, graphStorage.getNodeLat(bIndex),
-                                            graphStorage.getNodeLon(bIndex));
-                                    result.virtualNode(-1, bIndex, -1, distB, wx, wy, wayflags);
-                                    // System.out.println(graphStorage.getNodeLat(aIndex) + " " +
-                                    // graphStorage.getNodeLon(aIndex) + " " + graphStorage.getNodeLat(bIndex)
-                                    // + " " +
-                                    // graphStorage.getNodeLon(bIndex) + " " + -1 + " " + distB);
-                                    System.out.println(aIndex + " " + bIndex + " " + -1 + " " + distB);
-                                } else {
-                                    double distA = haversineDistance(wLat, wLon, graphStorage.getNodeLat(aIndex),
-                                            graphStorage.getNodeLon(aIndex));
-                                    double distB = haversineDistance(wLat, wLon, graphStorage.getNodeLat(bIndex),
-                                            graphStorage.getNodeLon(bIndex));
-                                    result.virtualNode(aIndex, bIndex, distA, distB, wx, wy, wayflags);
-                                    // System.out.println(graphStorage.getNodeLat(aIndex) + " " +
-                                    // graphStorage.getNodeLon(aIndex) + " " + graphStorage.getNodeLat(bIndex)
-                                    // + " " +
-                                    // graphStorage.getNodeLon(bIndex) + " " + distA + " " + distB);
-                                    // }
-                                    System.out.println(aIndex + " " + bIndex + " " + distA + " " + distB);
-
+                                            break;
+                                        }
+                                    }
+                                }
+                                int nearest2 = bIndex;
+                                int offset2 = index + 1;
+                                int len2 = 0;
+                                distB += haversineDistance(wLat, wLon, graphStorage.getNodeLat(shapeNodes[offset2]),
+                                        graphStorage.getNodeLon(shapeNodes[offset2]));
+                                if (graphStorage.getHead(bIndex) == -1) {
+                                    int temp = offset2;
+                                    for (int bi = index + 2; bi < offset + len; bi++) {
+                                        len2++;
+                                        distA += haversineDistance(graphStorage.getNodeLat(shapeNodes[temp]),
+                                                graphStorage.getNodeLon(shapeNodes[temp]),
+                                                graphStorage.getNodeLat(shapeNodes[bi]),
+                                                graphStorage.getNodeLon(shapeNodes[bi]));
+                                        temp = bi;
+                                        if (graphStorage.getHead(shapeNodes[bi]) != -1) {
+                                            bIndex = shapeNodes[bi];
+                                            break;
+                                        }
+                                    }
                                 }
 
+                                SnapContext result = new SnapContext();
+
+                                result.virtualNode(aIndex, bIndex, distA, distB, wx, wy, wayflags, nearest1,
+                                        nearest2, offset1, offset2, len1, len2);
+
+                                snapContexts.add(result);
+                                onPlaceMarker.accept(wLon + " " + wLat);
                                 return;
                             }
 

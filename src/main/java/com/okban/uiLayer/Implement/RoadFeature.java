@@ -4,12 +4,14 @@ import java.util.Collection;
 
 import org.openstreetmap.osmosis.core.domain.v0_6.Tag;
 
+import com.okban.Enum.WayFlags;
 import com.okban.model.GraphStorage;
 import com.okban.uiLayer.Abstract.MapFeature;
 
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 
 public class RoadFeature extends MapFeature {
 
@@ -64,7 +66,9 @@ public class RoadFeature extends MapFeature {
 
         if (name != null && zoom > 2) {
             gc.setLineWidth(1);
-            gc.setStroke(Color.BLACK);
+            gc.save();
+            gc.setStroke(Color.AQUA);
+            gc.setFill(Color.RED);
             double maxLength = 0;
 
             int bestAIndex = -1;
@@ -117,23 +121,28 @@ public class RoadFeature extends MapFeature {
                     screenY);
 
             gc.rotate(angle);
-            gc.setFont(Font.font(9));
+            gc.setFont(Font.font("Arial", FontWeight.BOLD, 9));
+
             gc.fillText(name, 0, 0);
-            double arrowLen = 12;
-            double arrowWing = 4;
 
-            double dir = flipped ? -1 : 1;
+            if ((wayflags & WayFlags.ONEWAY.getValue()) != 0) {
+                double arrowLen = 12;
+                double arrowWing = 4;
 
-            gc.strokeLine(0, 0, dir * arrowLen, 0);
+                double dir = flipped ? -1 : 1;
 
-            gc.strokeLine(
-                    dir * arrowLen, 0,
-                    dir * (arrowLen - arrowWing), -arrowWing);
+                gc.strokeLine(0, 0, dir * arrowLen, 0);
 
-            gc.strokeLine(
-                    dir * arrowLen, 0,
-                    dir * (arrowLen - arrowWing), arrowWing);
+                gc.strokeLine(
+                        dir * arrowLen, 0,
+                        dir * (arrowLen - arrowWing), -arrowWing);
+
+                gc.strokeLine(
+                        dir * arrowLen, 0,
+                        dir * (arrowLen - arrowWing), arrowWing);
+            }
             gc.restore();
+
         }
     }
 

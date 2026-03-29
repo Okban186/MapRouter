@@ -13,10 +13,10 @@ import javafx.scene.canvas.GraphicsContext;
 public abstract class MapFeature {
 
     protected int minLOD;
-    // public int[] geometry;
+
     protected BoundingBox boundingBox;
     protected int layer;
-    // protected Collection<Tag> tags;
+
     protected int wayflags;
     protected int lastDrawFrame = -1;
     protected int segmentOffset;
@@ -94,12 +94,4 @@ public abstract class MapFeature {
     public abstract void drawLabel(GraphicsContext gc, double cameraX, double cameraY, double zoom,
             GraphStorage graphStorage);
 
-    // protected String getTagValue(String key) {
-    // for (Tag t : tags) {
-    // if (t.getKey().equals(key))
-    // return t.getValue();
-    // }
-
-    // return null;
-    // }
 }

@@ -7,62 +7,67 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.PriorityQueue;
 
+import com.okban.Enum.WayFlags;
+import com.okban.dto.DijkstraResult;
 import com.okban.dto.Pair;
 import com.okban.model.GraphStorage;
-import com.okban.model.SnapResult;
+import com.okban.model.SnapContext;
 
 public class Dijkstra {
 
-  public static List<Pair<Integer, Integer>> compute(SnapResult start, SnapResult end, GraphStorage graphStorage) {
+  public static DijkstraResult compute(SnapContext start, SnapContext end, GraphStorage graphStorage) {
+
     PriorityQueue<Pair<Integer, Double>> open = new PriorityQueue<>(Comparator.comparingDouble(Pair::getValue));
     int n = graphStorage.getNodeCount();
     double[] costs = new double[n];
     int[] parent = new int[n];
     int[] parentEdge = new int[n];
+
     Arrays.fill(parent, -1);
     Arrays.fill(costs, -1);
     BitSet close = new BitSet(n);
 
-    open.add(new Pair<Integer, Double>(start.getNode1(), start.getDist1()));
-    open.add(new Pair<Integer, Double>(start.getNode2(), start.getDist2()));
-    costs[start.getNode1()] = start.getDist1();
-    costs[start.getNode2()] = start.getDist2();
+    if ((start.getWayflags() & WayFlags.ONEWAY.getValue()) == 0) {
+      open.add(new Pair<Integer, Double>(start.getNode1(), 0.0));
+      costs[start.getNode1()] = 0;
+
+    }
+
+    open.add(new Pair<Integer, Double>(start.getNode2(), 0.0));
+
+    costs[start.getNode2()] = 0;
 
     while (!open.isEmpty()) {
 
       Pair<Integer, Double> current = open.poll();
-      int currentIndex = current.key;
+      int currentNode = current.key;
       double currentCost = current.value;
 
-      if (close.get(currentIndex))
+      if (currentCost > costs[currentNode])
         continue;
 
-      close.set(currentIndex, true);
+      if (close.get(currentNode))
+        continue;
 
-      if (end.getDist1() == -1) {
-        if (currentIndex == end.getNode2()) {
+      close.set(currentNode, true);
 
-        }
-      } else {
-        if (currentIndex == end.getNode1()) {
+      if (currentNode == end.getNode1()) {
+        return buildPath(start, end, end.getNode1(), parent, parentEdge, graphStorage, costs[end.getNode1()]);
 
-        }
-
-        if (currentIndex == end.getNode2()) {
-
-        }
       }
 
-      // if (currentIndex == end.getNode1()) {
-      // return buildPath(parent, parentEdge, startIndex, endIndex,
-      // costs[endIndex], graphStorage);
-      // }
+      else if (currentNode == end.getNode2() && (end.getWayflags() & WayFlags.ONEWAY.getValue()) == 0) {
+        return buildPath(start, end, end.getNode2(), parent, parentEdge, graphStorage, costs[end.getNode2()]);
 
-      for (Integer eIdObj : graphStorage.edgesFromIterable(currentIndex)) {
+      }
+
+      for (Integer eIdObj : graphStorage.edgesFromIterable(currentNode)) {
         int eId = eIdObj;
+        int wayflag = graphStorage.getWayflag(eId);
+        if ((wayflag & WayFlags.MOTOR_VEHICLE.getValue()) == 0 || (wayflag & WayFlags.FOOTWAY.getValue()) != 0)
+          continue;
         int selectedIndex = graphStorage.getEdgeDes(eId);
         if (close.get(selectedIndex))
           continue;
@@ -74,7 +79,7 @@ public class Dijkstra {
 
           costs[selectedIndex] = newCost;
 
-          parent[selectedIndex] = currentIndex;
+          parent[selectedIndex] = currentNode;
           parentEdge[selectedIndex] = eId;
 
           open.add(new Pair<Integer, Double>(selectedIndex, newCost));
@@ -86,25 +91,14 @@ public class Dijkstra {
 
   }
 
-  public void test(int start, int end, int mid1, int mid2, int parent[]) {
-    List<Integer> path = new ArrayList<>();
-    int cur = end;
-    while (cur != -1) {
-      path.add(cur);
-      int next = parent[cur];
-      cur = next;
-    }
-
-    Collections.reverse(path);
-  }
-
-  private static List<Pair<Integer, Integer>> buildPath(int[] parent, int parentEdge[],
-      int start,
-      int end, double cost, GraphStorage graphStorage) {
-
+  private static DijkstraResult buildPath(SnapContext startSnap, SnapContext endSnap, int end, int parent[],
+      int parentEdge[],
+      GraphStorage graphStorage,
+      double cost) {
     List<Pair<Integer, Integer>> path = new ArrayList<>();
     int cur = end;
     while (cur != -1) {
+
       path.add(new Pair<Integer, Integer>(cur, parentEdge[cur]));
       int next = parent[cur];
       cur = next;
@@ -112,90 +106,18 @@ public class Dijkstra {
 
     Collections.reverse(path);
 
-    if (!path.get(0).getKey().equals(start))
-      return null;
+    if (path.get(0).key == startSnap.getNode1()) {
+      cost += startSnap.getDist1();
+    } else if (path.get(0).key == startSnap.getNode2()) {
+      cost += startSnap.getDist2();
+    }
 
-    // for (Edge e : graphNodes[1064960].getEdges()) {
-    // if (true)
-    // break;
-    // GraphNode node = graphNodes[e.getDesId()];
-    // System.out.print(node.getLat() + " " + node.getLon() + " " + node.getID() + "
-    // -> ");
-    // int[] shapeNodeIds = e.getShapeNodeIds();
-    // if (!e.isReverse()) {
-    // for (int index = 0; index < shapeNodeIds.length; index++) {
-    // GraphNode nodel = graphNodes[shapeNodeIds[index]];
-    // System.out.print(nodel.getLat() + " " + nodel.getLon() + " -> ");
+    if (path.get(path.size() - 1).key == endSnap.getNode1())
+      cost += endSnap.getDist1();
+    else if (path.get(path.size() - 1).key == endSnap.getNode2())
+      cost += endSnap.getDist2();
 
-    // }
-    // } else {
-    // for (int index = shapeNodeIds.length - 1; index >= 0; index--) {
-    // GraphNode nodel = graphNodes[shapeNodeIds[index]];
-    // System.out.print(nodel.getLat() + " " + nodel.getLon() + " -> ");
-    // }
-
-    // }
-    // System.out.println(e.getCost() + " " + e.isReverse());
-
-    // }
-
-    // StringBuilder sb = new StringBuilder();
-    // for (int i = 0; i < path.size() - 1; i++) {
-    // GraphNode graphNode = graphNodes[path.get(i)];
-    // sb.append(graphNode.getLon() + " " + graphNode.getLat());
-    // sb.append(" -> ");
-    // for (Edge e : graphNode.getEdges()) {
-    // if (e.getDesId() == path.get(i + 1)) {
-    // int[] shapeNodeIds = e.getShapeNodeIds();
-    // if (!e.isReverse()) {
-    // for (int index = 0; index < shapeNodeIds.length; index++) {
-    // GraphNode node = graphNodes[shapeNodeIds[index]];
-    // sb.append(node.getLon() + " " + node.getLat());
-    // sb.append(" -> ");
-    // }
-    // } else {
-    // for (int index = shapeNodeIds.length - 1; index >= 0; index--) {
-    // GraphNode node = graphNodes[shapeNodeIds[index]];
-    // sb.append(node.getLon() + " " + node.getLat());
-    // sb.append(" -> ");
-    // }
-    // }
-    // break;
-    // }
-    // }
-    // 10.903842200000001 106.84528 -> 10.9037199 106.84495220000001
-    // 10.9540468 106.9491165
-    // }
-    // for (int i : path) {
-    // if (true)
-    // break;
-    // GraphNode graphNode = graphNodes[i];
-    // if ("10.903842200000001 106.84528".equals(graphNode.getLat() + " " +
-    // graphNode.getLon())) {
-    // System.out.println(graphNode.getID());
-
-    // for (Edge e : graphNode.getEdges()) {
-    // GraphNode node = graphNodes[e.getDesId()];
-    // System.out.print(node.getLat() + " " + node.getLon() + " -> ");
-    // int[] shapeNodeIds = e.getShapeNodeIds();
-    // if (!e.isReverse()) {
-    // for (int index = 0; index < shapeNodeIds.length; index++) {
-    // GraphNode nodel = graphNodes[shapeNodeIds[index]];
-    // System.out.print(nodel.getLat() + " " + nodel.getLon() + " -> ");
-
-    // }
-    // } else {
-    // for (int index = shapeNodeIds.length - 1; index >= 0; index--) {
-    // GraphNode nodel = graphNodes[shapeNodeIds[index]];
-    // System.out.print(nodel.getLat() + " " + nodel.getLon() + " -> ");
-    // }
-
-    // }
-    // System.out.println(e.getCost());
-    // }
-    // }
-    // }
-
-    return path;
+    return new DijkstraResult(path, startSnap, endSnap, cost);
   }
+
 }

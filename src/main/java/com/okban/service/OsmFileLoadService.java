@@ -2,6 +2,9 @@ package com.okban.service;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 
 import org.openstreetmap.osmosis.core.container.v0_6.EntityContainer;
@@ -30,7 +33,7 @@ public class OsmFileLoadService {
         graphStorage = new GraphStorage();
     }
 
-    public Task<OsmDataResult> processPbfFile(File file, MapView mapView) {
+    public Task<OsmDataResult> processPbfFile(Path path, MapView mapView) {
 
         Task<OsmDataResult> loadTask = new Task<>() {
 
@@ -39,10 +42,8 @@ public class OsmFileLoadService {
             private double minLat = 10.30;
             private double maxLat = 11.20;
 
-            // private Map<Long, GraphNode> nodeMap = new HashMap<>();
-            // private Map<Long, List<MapFeature>> tileIndex = new HashMap<>();
             private HashMap<Long, Pair<Integer, Integer>> idMatching = new HashMap<>();
-            // private List<GraphNode> nodeMap = new ArrayList<>();
+
             // không cấp phát mảng 2D lớn ngay — dùng map sparse tạm thời
             private int tileCellX = (int) Math.max(1, Math.ceil(mapView.worldWidth / mapView.TILE_WIDTH));
             private int tileCellY = (int) Math.max(1, Math.ceil(mapView.worldHeight / mapView.TILE_HEIGHT));
@@ -50,18 +51,11 @@ public class OsmFileLoadService {
             private int maxTileXUsed = -1;
             private int maxTileYUsed = -1;
             private int currentEdgeCount = 0;
-            // private int edgeSegmentTile = 256;
-            // private int GRID_SEGMENT_SIZE = (int) (mapView.worldWidth / edgeSegmentTile);
-            // private int[] tileSegmentOffsets = new int[GRID_SEGMENT_SIZE *
-            // GRID_SEGMENT_SIZE];
-            // private int[] edgeSegmentTileCounts = new int[GRID_SEGMENT_SIZE *
-            // GRID_SEGMENT_SIZE];
-            // private long[] tileSegmentIds;
 
             @Override
             protected OsmDataResult call() throws Exception {
 
-                try (FileInputStream fips = new FileInputStream(file)) {
+                try (InputStream fips = Files.newInputStream(path)) {
 
                     OsmosisReader reader1 = new OsmosisReader(fips);
 
@@ -83,12 +77,7 @@ public class OsmFileLoadService {
                                     double worldX = xRatio * mapView.worldWidth;
                                     double worldY = yRatio * mapView.worldHeight;
 
-                                    // System.out.println(worldX + " " + worldY);
-
                                     graphStorage.addNode(worldX, worldY, node.getLongitude(), node.getLatitude());
-
-                                    // nodeMap.add(new GraphNode(idCounter, worldX, worldY, node.getLongitude(),
-                                    // node.getLatitude()));
                                     idMatching.put(node.getId(), new Pair<>(graphStorage.getNodeCount() - 1, 0));
                                 }
 
@@ -96,9 +85,6 @@ public class OsmFileLoadService {
 
                                     Way way = (Way) entity;
 
-                                    // FeatureType type = detectFeatureType(way);
-
-                                    // List<Integer> geometry = new ArrayList<>();
                                     for (WayNode wn : way.getWayNodes()) {
 
                                         Pair<Integer, Integer> pair = idMatching.get(wn.getNodeId());
@@ -107,16 +93,8 @@ public class OsmFileLoadService {
                                             continue;
                                         }
                                         pair.value = pair.value + 1;
-                                        // geometry.add(pair.getKey());
+
                                     }
-
-                                    // MapFeature feature = createFeature(type, geometry.stream()
-                                    // .mapToInt(i -> i)
-                                    // .toArray(), way);
-
-                                    // if (feature != null) {
-                                    // insertIntoTiles(feature, mapView);
-                                    // }
                                 }
 
                                 if (entity.getType() == EntityType.Relation)
@@ -147,7 +125,7 @@ public class OsmFileLoadService {
                     e.printStackTrace();
                 }
 
-                try (FileInputStream fips = new FileInputStream(file)) {
+                try (InputStream fips = Files.newInputStream(path)) {
                     OsmosisReader reader2 = new OsmosisReader(fips);
                     reader2.setSink(new Sink() {
 
@@ -193,7 +171,7 @@ public class OsmFileLoadService {
 
                                         int startIndex = startPair.key;
 
-                                        int currentIndex = 0;
+                                        int currentSegmentStart = 0;
 
                                         for (int index = 1; index < way.getWayNodes().size(); index++) {
                                             WayNode wn = way.getWayNodes().get(index);
@@ -208,11 +186,13 @@ public class OsmFileLoadService {
                                                 double cost = 0;
                                                 int prevIndex = startIndex;
 
-                                                int[] shapeNodeIds = new int[index - currentIndex + 1];
+                                                int[] shapeNodeIds = new int[index - currentSegmentStart + 1];
+                                                // tong so node co trong edge de tao thanh topo bao gom endNode dau va
+                                                // cuoi
 
                                                 int shapeIndex = 0;
                                                 shapeNodeIds[shapeIndex++] = startIndex;
-                                                for (int i = currentIndex + 1; i <= index; i++) {
+                                                for (int i = currentSegmentStart + 1; i <= index; i++) {
 
                                                     Pair<Integer, Integer> nextPair = idMatching == null ? null
                                                             : idMatching.get(way.getWayNodes().get(i).getNodeId());
@@ -234,24 +214,20 @@ public class OsmFileLoadService {
 
                                                     prevIndex = nextIndex;
                                                 }
-                                                // Edge edge1 = new Edge(selectedIndex, cost, false, shapeNodeIds,
-                                                // edgeGroupIdCounter++);
 
                                                 graphStorage.addEdge(startIndex, selectedIndex, cost, false,
-                                                        shapeNodeIds);
-                                                // currentStart.getEdges().add(edge1);
+                                                        shapeNodeIds, wayflags);
 
                                                 size += graphStorage.getShapeLength(graphStorage.getEdgeCount() - 1);
 
                                                 if (!oneway) {
-                                                    // Edge edge2 = new Edge(currentStart.getID(), cost, true,
-                                                    // shapeNodeIds,
-                                                    // edgeGroupIdCounter++);
-                                                    graphStorage.addEdge(selectedIndex, startIndex, cost, true, null);
-                                                    // selectedNode.getEdges().add(edge2);
+
+                                                    graphStorage.addEdge(selectedIndex, startIndex, cost, true, null,
+                                                            wayflags);
+
                                                 }
 
-                                                currentIndex = index;
+                                                currentSegmentStart = index;
                                                 startIndex = selectedIndex;
 
                                             }
@@ -283,11 +259,13 @@ public class OsmFileLoadService {
 
                     reader2.run();
 
-                } catch (Exception e) {
+                } catch (
+
+                Exception e) {
                     e.printStackTrace();
                 }
 
-                // Chuyển sparseTileIndex thành mảng nhỏ nhất cần thiết để trả về (giữ API cũ)
+                // Chuyển sparseTileIndex thành mảng nhỏ nhất cần thiết để trả về
                 int finalX = Math.max(0, maxTileXUsed + 1);
                 int finalY = Math.max(0, maxTileYUsed + 1);
                 List<MapFeature>[][] finalTileIndex = new ArrayList[finalX][finalY];
@@ -322,27 +300,27 @@ public class OsmFileLoadService {
             private MapFeature createFeature(FeatureType type,
                     int segmentOffSet, int segmentLen,
                     Way way, int wayflags) {
-
+                if (type == null)
+                    return null;
                 int minLOD = classifyLOD(type, way);
-
+                String name = getTagValue(way, "name");
+                if (name == "" || name == null)
+                    name = getTagValue(way, "name:vi");
+                if (name == "" || name == null)
+                    name = getTagValue(way, "alt_name");
+                if (name == "" || name == null)
+                    name = getTagValue(way, "name:en");
                 switch (type) {
 
                     case ROAD:
                         return new RoadFeature(segmentOffSet, segmentLen, minLOD,
                                 getRoadWidth(getTagValue(way, "highway")), 3,
-                                wayflags, getTagValue(way, "name"), graphStorage);
+                                wayflags, name, graphStorage);
 
                     case BUILDING:
                         return new BuildingFeature(segmentOffSet, segmentLen, minLOD, 2, 1, wayflags,
-                                getTagValue(way, "name"),
+                                name,
                                 graphStorage);
-
-                    // case WATER:
-                    // return new WaterFeature(geometry, minLOD, estimateWidth(way), 0,
-                    // way.getTags(), graphStorage);
-
-                    // case LANDUSE:
-                    // return new LanduseFeature(geometry, minLOD, 1, way.getTags(), graphStorage);
 
                     default:
                         return null;
@@ -363,6 +341,8 @@ public class OsmFileLoadService {
                         return 8;
                     case "residential":
                         return 7;
+                    case "footway":
+                        return 1;
                     default:
                         return 3;
                 }
@@ -403,6 +383,7 @@ public class OsmFileLoadService {
                 }
 
             }
+
         };
 
         new Thread(loadTask).start();
@@ -413,15 +394,19 @@ public class OsmFileLoadService {
 
         for (Tag tag : way.getTags()) {
 
-            if (tag.getKey().equals("highway"))
+            if (tag.getKey().equals("highway")) {
+
                 return FeatureType.ROAD;
+            }
 
             if (tag.getKey().equals("building"))
                 return FeatureType.BUILDING;
 
             if (tag.getKey().equals("waterway") ||
-                    (tag.getKey().equals("natural") && tag.getValue().equals("water")))
+                    (tag.getKey().equals("natural") && tag.getValue().equals("water"))) {
+                System.out.println("ok");
                 return FeatureType.WATER;
+            }
 
             if (tag.getKey().equals("landuse"))
                 return FeatureType.LANDUSE;
@@ -431,7 +416,8 @@ public class OsmFileLoadService {
     }
 
     private int classifyLOD(FeatureType type, Way way) {
-
+        if (type == null)
+            return 3;
         switch (type) {
 
             case WATER:
@@ -463,33 +449,14 @@ public class OsmFileLoadService {
     }
 
     private String getTagValue(Way way, String key) {
+        if (way.getTags() == null)
+            return "";
         for (Tag tag : way.getTags()) {
             if (tag.getKey().equals(key)) {
                 return tag.getValue();
             }
         }
         return null;
-    }
-
-    private double estimateWidth(Way way) {
-        for (Tag tag : way.getTags()) {
-            switch (tag.getKey()) {
-
-                case "river":
-                    return 4;
-
-                case "canal":
-                    return 3;
-
-                case "stream":
-                    return 2;
-
-                default:
-                    return 1;
-            }
-        }
-
-        return 1;
     }
 
     public static double distance(double lat1, double lon1, double lat2, double lon2) {
@@ -513,14 +480,25 @@ public class OsmFileLoadService {
     public int wayflagsBuild(Way way) {
         int wayflags = 0;
         for (Tag tag : way.getTags()) {
+            // if (tag.getKey().contains("maxspeed"))
+            // System.out.println(way.getId() + " " + tag.getKey() + " " + tag.getValue());
             switch (tag.getKey()) {
+
                 case "highway":
                     wayflags |= WayFlags.HIGHWAY.getValue();
+                    if (tag.getValue().equals("footway") || tag.getValue().equals("steps"))
+                        wayflags |= WayFlags.FOOTWAY.getValue();
                 case "oneway":
                     if (tag.getValue().equals("yes"))
                         wayflags |= WayFlags.ONEWAY.getValue();
                 case "building":
+
                     wayflags |= WayFlags.BUILDING.getValue();
+
+                case "motor_vehicle":
+
+                    wayflags |= WayFlags.MOTOR_VEHICLE.getValue();
+
             }
         }
 
