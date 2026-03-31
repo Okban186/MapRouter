@@ -7,10 +7,13 @@ import com.okban.Enum.WayFlags;
 import com.okban.dto.OsmDataResult;
 
 import com.okban.model.GraphStorage;
+import com.okban.model.POI;
 import com.okban.model.SnapContext;
 import com.okban.uiLayer.Abstract.MapFeature;
+import com.okban.uiLayer.Implement.RoadFeature;
 import com.okban.uiLayer.Implement.RoutingFeature;
 
+import javafx.animation.AnimationTimer;
 import javafx.geometry.Point2D;
 import javafx.scene.Parent;
 import javafx.scene.canvas.Canvas;
@@ -29,8 +32,8 @@ public class MapView {
     private Canvas lineOverlay;
     private double ROOT_WIDTH;
     private double ROOT_HEIGHT;
-    public double TILE_WIDTH = 512;
-    public double TILE_HEIGHT = 512;
+    public double TILE_WIDTH = 256;
+    public double TILE_HEIGHT = 256;
     public double worldWidth = 100_000;
     public double worldHeight = 100_000;
     private double cameraX = 0;
@@ -54,6 +57,7 @@ public class MapView {
     private double dragAccumX = 0;
     private double dragAccumY = 0;
     private List<SnapContext> snapContexts;
+    private boolean needRender = false;
 
     private OsmDataResult dataWrapper;
 
@@ -95,6 +99,20 @@ public class MapView {
 
         map.getChildren().addAll(lineConnect, lineOverlay, overlay);
         mapEvent();
+
+        AnimationTimer timer = new AnimationTimer() {
+
+            @Override
+            public void handle(long now) {
+                if (needRender) {
+                    repaint();
+                    needRender = false;
+                }
+            }
+
+        };
+
+        timer.start();
         return map;
     }
 
@@ -156,7 +174,8 @@ public class MapView {
         int maxTileX = (int) (maxWorldX / TILE_WIDTH);
         int minTileY = (int) (minWorldY / TILE_HEIGHT);
         int maxTileY = (int) (maxWorldY / TILE_HEIGHT);
-
+        // System.out.println(minTileX + " " + maxTileX + " " + minTileY + " " +
+        // maxTileY);
         minTileX = Math.max(0, minTileX);
         minTileY = Math.max(0, minTileY);
         maxTileX = Math.min(tileCell - 1, maxTileX);
@@ -207,6 +226,7 @@ public class MapView {
             for (int ty = minTileY; ty <= maxTileY; ty++) {
 
                 List<MapFeature> features = bucketMap[tx][ty];
+
                 if (features == null)
                     continue;
 
@@ -281,8 +301,8 @@ public class MapView {
             dragAccumX += dx;
             dragAccumY += dy;
 
-            if (Math.abs(dragAccumX) >= TILE_WIDTH ||
-                    Math.abs(dragAccumY) >= TILE_HEIGHT) {
+            if (Math.abs(dragAccumX) >= TILE_WIDTH * 2 ||
+                    Math.abs(dragAccumY) >= TILE_HEIGHT * 2) {
 
                 cameraX -= dragAccumX / zoom;
                 cameraY -= dragAccumY / zoom;
@@ -328,11 +348,11 @@ public class MapView {
             double maxX = wx + half;
             double maxY = wy + half;
 
-            int minTileX = (int) Math.floor(minX / 512);
-            int maxTileX = (int) Math.floor(maxX / 512);
+            int minTileX = (int) Math.floor(minX / 256);
+            int maxTileX = (int) Math.floor(maxX / 256);
 
-            int minTileY = (int) Math.floor(minY / 512);
-            int maxTileY = (int) Math.floor(maxY / 512);
+            int minTileY = (int) Math.floor(minY / 256);
+            int maxTileY = (int) Math.floor(maxY / 256);
 
             minTileX = Math.max(0, minTileX);
             minTileY = Math.max(0, minTileY);
@@ -353,7 +373,11 @@ public class MapView {
                             continue;
                         int offset = feature.getSegmentOffSet();
                         int len = feature.getSegmentLen();
-                        double threshold = Math.min(feature.getBase() * zoom, 60);
+                        double threshold = 0;
+                        if (feature instanceof RoadFeature roadFeature)
+                            threshold = Math.min(roadFeature.getHighwayWidth() * zoom, 60);
+                        else
+                            continue;
 
                         int wayflags = feature.getWayflags();
                         for (int index = offset; index < offset + len - 1; index++) {
@@ -494,8 +518,7 @@ public class MapView {
             cameraY += worldYBefore - worldYAfter;
 
             clampCamera();
-
-            repaint();
+            needRender = true;
         });
     }
 
