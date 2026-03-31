@@ -4,21 +4,33 @@ import java.util.Collection;
 
 import org.openstreetmap.osmosis.core.domain.v0_6.Tag;
 
+import com.okban.Enum.HighwayType;
 import com.okban.Enum.WayFlags;
 import com.okban.model.GraphStorage;
 import com.okban.uiLayer.Abstract.MapFeature;
 
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import javafx.scene.text.Text;
 
 public class RoadFeature extends MapFeature {
 
-    public RoadFeature(int segmentOffset, int segmentLen, int minLOD, double base, int layer, int wayflags, String name,
-            GraphStorage graphStorage) {
-        super(segmentOffset, segmentLen, minLOD, layer, base, wayflags, name, graphStorage);
+    private HighwayType highwayType;
 
+    public RoadFeature(int segmentOffset, int segmentLen, int minLOD, HighwayType highwayType, int layer, int wayflags,
+            String name,
+            GraphStorage graphStorage) {
+
+        super(segmentOffset, segmentLen, minLOD, layer, wayflags, name, graphStorage);
+        this.highwayType = highwayType;
+
+    }
+
+    public double getHighwayWidth() {
+        return highwayType.getWidth();
     }
 
     @Override
@@ -30,9 +42,10 @@ public class RoadFeature extends MapFeature {
         double lastY = 0;
 
         gc.save();
+        gc.setLineCap(StrokeLineCap.ROUND);
         gc.beginPath();
-        gc.setStroke(Color.DARKGREY);
-        gc.setLineWidth(Math.min(base * zoom, 60));
+        gc.setStroke(Color.web(highwayType.getHexColor()));
+        gc.setLineWidth(Math.min(highwayType.getWidth() * zoom, 60));
         int shapeNodes[] = graphStorage.getShapeNodes();
         for (int i = segmentOffset; i < segmentLen + segmentOffset; i++) {
 
@@ -91,6 +104,18 @@ public class RoadFeature extends MapFeature {
                     bestBIndex = bIndex;
                 }
             }
+
+            Text text = new Text(name);
+            text.setFont(gc.getFont());
+            double textWidth = text.getLayoutBounds().getWidth();
+
+            double segmentLength = Math.sqrt(maxLength) * zoom;
+
+            if (textWidth > segmentLength * 0.8) {
+                gc.restore();
+                return;
+            }
+
             if (bestAIndex < 0 || bestBIndex < 0)
                 return;
 
@@ -121,7 +146,7 @@ public class RoadFeature extends MapFeature {
                     screenY);
 
             gc.rotate(angle);
-            gc.setFont(Font.font("Arial", FontWeight.BOLD, 9));
+            gc.setFont(Font.font("Arial", FontWeight.BOLD, 11));
 
             gc.fillText(name, 0, 0);
 

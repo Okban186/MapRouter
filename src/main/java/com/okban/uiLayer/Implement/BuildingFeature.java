@@ -4,29 +4,36 @@ import java.util.Collection;
 
 import org.openstreetmap.osmosis.core.domain.v0_6.Tag;
 
+import com.okban.Enum.HighwayType;
+import com.okban.Enum.WayFlags;
 import com.okban.model.GraphStorage;
 import com.okban.uiLayer.Abstract.MapFeature;
 
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.text.Font;
+import javafx.scene.text.Text;
 
 public class BuildingFeature extends MapFeature {
+
+    private double base;
 
     public BuildingFeature(int segmentOffset, int segmentLen, int minLOD, int layer, double base, int wayflags,
             String name,
             GraphStorage graphStorage) {
-        super(segmentOffset, segmentLen, minLOD, layer, base, wayflags, name, graphStorage);
+        super(segmentOffset, segmentLen, minLOD, layer, wayflags, name, graphStorage);
+        this.base = base;
 
     }
 
     @Override
     public void draw(GraphicsContext gc, double cameraX, double cameraY, double zoom, GraphStorage graphStorage) {
-
         boolean firstPoint = true;
         double lastX = 0;
         double lastY = 0;
         gc.save();
+        gc.setLineCap(StrokeLineCap.ROUND);
         gc.setLineWidth(base);
         gc.beginPath();
         int[] shapeNodes = graphStorage.getShapeNodes();
@@ -39,7 +46,7 @@ public class BuildingFeature extends MapFeature {
             double dx = screenX - lastX;
             double dy = screenY - lastY;
 
-            if (zoom < 1.5 && !firstPoint && dx * dx + dy * dy < 12) {
+            if (zoom < 1.8 && !firstPoint && dx * dx + dy * dy < 8) {
                 continue;
             }
 
@@ -55,10 +62,19 @@ public class BuildingFeature extends MapFeature {
         }
 
         gc.closePath();
-        gc.setFill(Color.GRAY);
-        gc.fill();
+        gc.setStroke(Color.web("#CBCBCB"));
+        if ((wayflags & WayFlags.BUILDING.getValue()) != 0) {
+            gc.setFill(Color.web("#CBCBCB"));
+            gc.fill();
+            if ((wayflags & WayFlags.HISTORIC.getValue()) != 0 || (wayflags & WayFlags.TOURISM.getValue()) != 0) {
+                gc.setLineWidth(2);
+                gc.setStroke(Color.web("#0A5C36"));
+            }
+        } else {
+            gc.setLineWidth(2);
+            gc.setStroke(Color.web("#0A5C36"));
+        }
 
-        gc.setStroke(Color.DARKGRAY);
         gc.stroke();
         gc.restore();
 
@@ -69,57 +85,23 @@ public class BuildingFeature extends MapFeature {
 
         if (name != null && zoom > 2) {
             gc.save();
-            gc.setLineWidth(1);
-            gc.setStroke(Color.BLACK);
-            double maxLength = 0;
 
-            int bestAIndex = -1;
-            int bestBIndex = -1;
-            int shapeNodes[] = graphStorage.getShapeNodes();
-            for (int i = segmentOffset; i < segmentLen + segmentOffset - 1; i++) {
-
-                int aIndex = shapeNodes[i];
-                int bIndex = shapeNodes[i + 1];
-
-                double dx = graphStorage.getNodeX(bIndex) - graphStorage.getNodeX(aIndex);
-                double dy = graphStorage.getNodeY(bIndex) - graphStorage.getNodeY(bIndex);
-
-                double len = dx * dx + dy * dy;
-
-                if (len > maxLength) {
-                    maxLength = len;
-                    bestAIndex = aIndex;
-                    bestBIndex = bIndex;
-                }
-            }
-            double ax = graphStorage.getNodeX(bestAIndex);
-            double ay = graphStorage.getNodeY(bestAIndex);
-            double bx = graphStorage.getNodeX(bestBIndex);
-            double by = graphStorage.getNodeY(bestBIndex);
-
-            double x = (ax + bx) / 2;
-            double y = (ay + by) / 2;
-
-            double dx = bx - ax;
-            double dy = by - ay;
-
-            double angle = Math.toDegrees(Math.atan2(dy, dx));
-
-            if (angle > 90 || angle < -90) {
-                angle += 180;
-            }
-
-            gc.save();
+            gc.setFont(Font.font(9));
+            gc.setFill(Color.RED);
+            double x = (boundingBox.getMinX() + boundingBox.getMaxX()) / 2;
+            double y = (boundingBox.getMinY() + boundingBox.getMaxY()) / 2;
 
             double screenX = (x + 512 - cameraX) * zoom;
             double screenY = (y + 512 - cameraY) * zoom;
 
-            gc.translate(screenX, screenY);
+            Text text = new Text(name);
+            text.setFont(gc.getFont());
+            double textWidth = text.getLayoutBounds().getWidth();
+            double textHeight = text.getLayoutBounds().getHeight();
 
-            gc.rotate(angle);
-            gc.setFont(Font.font(9));
-            gc.fillText(name, 0, 0);
-
+            gc.fillText(name,
+                    screenX - textWidth / 2,
+                    screenY + textHeight / 4);
             gc.restore();
         }
     }
