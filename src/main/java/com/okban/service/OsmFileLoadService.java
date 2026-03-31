@@ -6,16 +6,19 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.regex.MatchResult;
 
 import org.openstreetmap.osmosis.core.container.v0_6.EntityContainer;
 import org.openstreetmap.osmosis.core.domain.v0_6.*;
 import org.openstreetmap.osmosis.core.task.v0_6.Sink;
 
 import com.okban.Enum.FeatureType;
+import com.okban.Enum.HighwayType;
 import com.okban.Enum.WayFlags;
 import com.okban.dto.OsmDataResult;
 import com.okban.dto.Pair;
 import com.okban.model.GraphStorage;
+import com.okban.model.POI;
 import com.okban.uiLayer.MapView;
 import com.okban.uiLayer.Abstract.MapFeature;
 import com.okban.uiLayer.Implement.BuildingFeature;
@@ -48,6 +51,7 @@ public class OsmFileLoadService {
             private int tileCellX = (int) Math.max(1, Math.ceil(mapView.worldWidth / mapView.TILE_WIDTH));
             private int tileCellY = (int) Math.max(1, Math.ceil(mapView.worldHeight / mapView.TILE_HEIGHT));
             private Map<Long, List<MapFeature>> sparseTileIndex = new HashMap<>();
+
             private int maxTileXUsed = -1;
             private int maxTileYUsed = -1;
             private int currentEdgeCount = 0;
@@ -79,12 +83,20 @@ public class OsmFileLoadService {
 
                                     graphStorage.addNode(worldX, worldY, node.getLongitude(), node.getLatitude());
                                     idMatching.put(node.getId(), new Pair<>(graphStorage.getNodeCount() - 1, 0));
+
                                 }
 
                                 if (entity.getType() == EntityType.Way) {
 
                                     Way way = (Way) entity;
+                                    String name = getTagValue(way, "name");
+                                    if (name != null
+                                            && name.toLowerCase().contains("bến nhà rồng")) {
+                                        for (Tag t : way.getTags())
+                                            System.out.println(t.getKey() + " " + t.getValue());
+                                        System.out.println(way.getWayNodes().size());
 
+                                    }
                                     for (WayNode wn : way.getWayNodes()) {
 
                                         Pair<Integer, Integer> pair = idMatching.get(wn.getNodeId());
@@ -154,8 +166,7 @@ public class OsmFileLoadService {
                                     Way way = (Way) entity;
                                     int size = 0;
                                     int wayflags = wayflagsBuild(way);
-                                    if ((wayflags & WayFlags.BUILDING.getValue()) != 0
-                                            || (wayflags & WayFlags.HIGHWAY.getValue()) != 0) {
+                                    if (wayflags != 0) {
 
                                         if (way.getWayNodes() == null || way.getWayNodes().isEmpty())
                                             return;
@@ -232,7 +243,7 @@ public class OsmFileLoadService {
 
                                             }
                                         }
-                                        FeatureType featureType = detectFeatureType(way);
+                                        FeatureType featureType = detectFeatureType(wayflags);
 
                                         MapFeature feature = createFeature(featureType,
                                                 graphStorage.getShapeOffset(currentEdgeCount),
@@ -274,6 +285,7 @@ public class OsmFileLoadService {
                     int tx = (int) (k >>> 32);
                     int ty = (int) k;
                     if (tx < finalX && ty < finalY) {
+
                         finalTileIndex[tx][ty] = e.getValue();
 
                     }
@@ -302,7 +314,7 @@ public class OsmFileLoadService {
                     Way way, int wayflags) {
                 if (type == null)
                     return null;
-                int minLOD = classifyLOD(type, way);
+                int minLOD = classifyLOD(type, way, wayflags);
                 String name = getTagValue(way, "name");
                 if (name == "" || name == null)
                     name = getTagValue(way, "name:vi");
@@ -314,7 +326,7 @@ public class OsmFileLoadService {
 
                     case ROAD:
                         return new RoadFeature(segmentOffSet, segmentLen, minLOD,
-                                getRoadWidth(getTagValue(way, "highway")), 3,
+                                getHighwayType(getTagValue(way, "highway")), 3,
                                 wayflags, name, graphStorage);
 
                     case BUILDING:
@@ -327,24 +339,24 @@ public class OsmFileLoadService {
                 }
             }
 
-            private double getRoadWidth(String highway) {
+            private HighwayType getHighwayType(String highway) {
                 switch (highway) {
                     case "motorway":
-                        return 13;
+                        return HighwayType.MOTORWAY;
                     case "trunk":
-                        return 13;
+                        return HighwayType.TRUNK;
                     case "primary":
-                        return 11;
+                        return HighwayType.PRIMARY;
                     case "secondary":
-                        return 9;
+                        return HighwayType.SECONDARY;
                     case "tertiary":
-                        return 8;
+                        return HighwayType.TERTIARY;
                     case "residential":
-                        return 7;
+                        return HighwayType.RESIDENTIAL;
                     case "footway":
-                        return 1;
+                        return HighwayType.FOOTWAY;
                     default:
-                        return 3;
+                        return HighwayType.UNSET;
                 }
             }
 
@@ -390,32 +402,21 @@ public class OsmFileLoadService {
         return loadTask;
     }
 
-    private FeatureType detectFeatureType(Way way) {
+    private FeatureType detectFeatureType(int wayFlags) {
 
-        for (Tag tag : way.getTags()) {
+        if ((wayFlags & WayFlags.HIGHWAY.getValue()) != 0) {
 
-            if (tag.getKey().equals("highway")) {
-
-                return FeatureType.ROAD;
-            }
-
-            if (tag.getKey().equals("building"))
-                return FeatureType.BUILDING;
-
-            if (tag.getKey().equals("waterway") ||
-                    (tag.getKey().equals("natural") && tag.getValue().equals("water"))) {
-                System.out.println("ok");
-                return FeatureType.WATER;
-            }
-
-            if (tag.getKey().equals("landuse"))
-                return FeatureType.LANDUSE;
+            return FeatureType.ROAD;
         }
+
+        if ((wayFlags & WayFlags.BUILDING.getValue()) != 0 || (wayFlags & WayFlags.HISTORIC.getValue()) != 0
+                || (wayFlags & WayFlags.TOURISM.getValue()) != 0)
+            return FeatureType.BUILDING;
 
         return null;
     }
 
-    private int classifyLOD(FeatureType type, Way way) {
+    private int classifyLOD(FeatureType type, Way way, int wayflag) {
         if (type == null)
             return 3;
         switch (type) {
@@ -438,6 +439,9 @@ public class OsmFileLoadService {
                 return 2;
 
             case BUILDING:
+
+                if ((wayflag & WayFlags.HISTORIC.getValue()) != 0 || (wayflag & WayFlags.TOURISM.getValue()) != 0)
+                    return 0;
                 return 3;
 
             case LANDUSE:
@@ -448,10 +452,10 @@ public class OsmFileLoadService {
         }
     }
 
-    private String getTagValue(Way way, String key) {
-        if (way.getTags() == null)
-            return "";
-        for (Tag tag : way.getTags()) {
+    private String getTagValue(Entity e, String key) {
+        if (e.getTags() == null)
+            return null;
+        for (Tag tag : e.getTags()) {
             if (tag.getKey().equals(key)) {
                 return tag.getValue();
             }
@@ -488,17 +492,24 @@ public class OsmFileLoadService {
                     wayflags |= WayFlags.HIGHWAY.getValue();
                     if (tag.getValue().equals("footway") || tag.getValue().equals("steps"))
                         wayflags |= WayFlags.FOOTWAY.getValue();
+                    break;
                 case "oneway":
                     if (tag.getValue().equals("yes"))
                         wayflags |= WayFlags.ONEWAY.getValue();
+                    break;
                 case "building":
 
                     wayflags |= WayFlags.BUILDING.getValue();
+                    break;
 
-                case "motor_vehicle":
+                case "historic":
 
-                    wayflags |= WayFlags.MOTOR_VEHICLE.getValue();
+                    wayflags |= WayFlags.HISTORIC.getValue();
+                    break;
 
+                case "tourism":
+                    wayflags |= WayFlags.TOURISM.getValue();
+                    break;
             }
         }
 
