@@ -20,10 +20,6 @@ public class SnapContext {
 
     }
 
-    public void SnapNode() {
-
-    }
-
     public void virtualNode(int node1, int node2, double dis1, double dis2, double x, double y,
             int wayflags, int nearest1, int nearest2, int offset1, int offset2, int len1, int len2) {
         this.node1 = node1;

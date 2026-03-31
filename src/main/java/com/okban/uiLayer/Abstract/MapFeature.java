@@ -4,6 +4,7 @@ import java.util.Collection;
 
 import org.openstreetmap.osmosis.core.domain.v0_6.Tag;
 
+import com.okban.Enum.HighwayType;
 import com.okban.Enum.WayFlags;
 import com.okban.model.GraphStorage;
 
@@ -21,23 +22,20 @@ public abstract class MapFeature {
     protected int lastDrawFrame = -1;
     protected int segmentOffset;
     protected int segmentLen;
-    protected double base;
+
     protected String name;
 
-    public MapFeature(int segmentOffset, int segmentLen, int minLOD, int layer, double base, int wayflags, String name,
+    public MapFeature(int segmentOffset, int segmentLen, int minLOD, int layer, int wayflags,
+            String name,
             GraphStorage graphStorage) {
         this.segmentOffset = segmentOffset;
         this.segmentLen = segmentLen;
         this.minLOD = minLOD;
         this.boundingBox = computeBoundingBox(graphStorage);
         this.layer = layer;
-        this.base = base;
+
         this.wayflags = wayflags;
         this.name = name;
-    }
-
-    public double getBase() {
-        return base;
     }
 
     public int getWayflags() {

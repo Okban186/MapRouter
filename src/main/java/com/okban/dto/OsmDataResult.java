@@ -3,6 +3,7 @@ package com.okban.dto;
 import java.util.List;
 
 import com.okban.model.GraphStorage;
+import com.okban.model.POI;
 import com.okban.uiLayer.Abstract.MapFeature;
 
 public class OsmDataResult {

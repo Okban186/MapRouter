@@ -4,13 +4,12 @@ public class POI {
     String name;
     double x;
     double y;
-    String type;
 
-    public POI(String name, double x, double y, String type) {
+    public POI(String name, double x, double y) {
         this.name = name;
         this.x = x;
         this.y = y;
-        this.type = type;
+
     }
 
     public String getName() {
@@ -25,7 +24,4 @@ public class POI {
         return y;
     }
 
-    public String getType() {
-        return type;
-    }
 }

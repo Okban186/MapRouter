@@ -66,7 +66,8 @@ public class Dijkstra {
       for (Integer eIdObj : graphStorage.edgesFromIterable(currentNode)) {
         int eId = eIdObj;
         int wayflag = graphStorage.getWayflag(eId);
-        if ((wayflag & WayFlags.MOTOR_VEHICLE.getValue()) == 0 || (wayflag & WayFlags.FOOTWAY.getValue()) != 0)
+        if ((wayflag & WayFlags.FOOTWAY.getValue()) != 0
+            || (wayflag & WayFlags.HISTORIC.getValue()) != 0)
           continue;
         int selectedIndex = graphStorage.getEdgeDes(eId);
         if (close.get(selectedIndex))

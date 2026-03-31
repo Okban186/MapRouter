@@ -99,6 +99,17 @@ public class App extends Application {
                 mapView.setRoutingTiles(routingFeature);
                 System.gc();
                 mapView.repaint();
+                // Runtime runtime = Runtime.getRuntime();
+
+                // long totalMemory = runtime.totalMemory();
+                // long freeMemory = runtime.freeMemory();
+                // long usedMemory = totalMemory - freeMemory;
+
+                // System.out.println("Total Memory (MB): " + totalMemory / (1024 * 1024));
+                // System.out.println("Free Memory (MB): " + freeMemory / (1024 * 1024));
+                // System.out.println("Used Memory (MB): " + usedMemory / (1024 * 1024));
+                // System.out.println("Max Memory (MB): " + runtime.maxMemory() / (1024 *
+                // 1024));
 
             });
 

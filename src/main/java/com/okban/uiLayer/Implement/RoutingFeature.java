@@ -14,6 +14,7 @@ import com.okban.model.SnapContext;
 import javafx.geometry.BoundingBox;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
@@ -85,6 +86,7 @@ public class RoutingFeature {
             return;
 
         gc.save();
+        gc.setLineCap(StrokeLineCap.ROUND);
         gc.beginPath();
         gc.setStroke(mainColor);
         gc.setLineWidth(Math.max(5, Math.min(base * zoom, 60)));
