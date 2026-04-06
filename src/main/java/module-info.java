@@ -4,6 +4,7 @@ module com.okban {
     requires osmosis.pbf;
     requires osmosis.core;
     requires javafx.graphics;
+    requires javafx.base;
 
     opens com.okban to javafx.fxml;
 

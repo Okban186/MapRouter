@@ -1,0 +1,418 @@
+#
+# A fatal error has been detected by the Java Runtime Environment:
+#
+#  SIGSEGV (0xb) at pc=0x00007ac41b23eb73, pid=1411138, tid=1411168
+#
+# JRE version: OpenJDK Runtime Environment (21.0.9+10) (build 21.0.9+10)
+# Java VM: OpenJDK 64-Bit Server VM (21.0.9+10, mixed mode, sharing, tiered, compressed oops, compressed class ptrs, g1 gc, linux-amd64)
+# Problematic frame:
+# C  [libglib-2.0.so.0+0x82b73]  g_slist_foreach+0x23
+#
+# Core dump will be written. Default location: Core dumps may be processed with "/usr/lib/systemd/systemd-coredump %P %u %g %s %t %c %h %d %F" (or dumping to /home/okban/Documents/GTSMapRouter/maprouter/core.1411138)
+#
+# If you would like to submit a bug report, please visit:
+#   https://bugreport.java.com/bugreport/crash.jsp
+# The crash happened outside the Java Virtual Machine in native code.
+# See problematic frame for where to report the bug.
+#
+
+---------------  S U M M A R Y ------------
+
+Command Line: -XX:+ShowCodeDetailsInExceptionMessages --module-path=/home/okban/Documents/GTSMapRouter/maprouter/target/classes:/home/okban/.m2/repository/org/openjfx/javafx-controls/21/javafx-controls-21-linux.jar:/home/okban/.m2/repository/org/openjfx/javafx-graphics/21/javafx-graphics-21-linux.jar:/home/okban/.m2/repository/org/openjfx/javafx-base/21/javafx-base-21-linux.jar:/home/okban/.m2/repository/org/openjfx/javafx-fxml/21/javafx-fxml-21-linux.jar:/home/okban/.m2/repository/org/openstreetmap/osmosis/osmosis-pbf/0.48.3/osmosis-pbf-0.48.3.jar:/home/okban/.m2/repository/org/openstreetmap/osmosis/osmosis-core/0.48.3/osmosis-core-0.48.3.jar -Djdk.module.main=com.okban com.okban/com.okban.App
+
+Host: Intel(R) Core(TM) i3-8100 CPU @ 3.60GHz, 4 cores, 15G, Archcraft
+Time: Wed Apr  1 20:40:04 2026 +07 elapsed time: 34.259584 seconds (0d 0h 0m 34s)
+
+---------------  T H R E A D  ---------------
+
+Current thread (0x00007ac4d452c830):  JavaThread "JavaFX Application Thread"        [_thread_in_native, id=1411168, stack(0x00007ac40ce41000,0x00007ac40cf41000) (1024K)]
+
+Stack: [0x00007ac40ce41000,0x00007ac40cf41000],  sp=0x00007ac40cf3e230,  free space=1012k
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+C  [libglib-2.0.so.0+0x82b73]  g_slist_foreach+0x23
+C  [libpango-1.0.so.0+0x2a8dd]  pango_item_free+0x2d
+j  com.sun.javafx.font.freetype.OSPango.pango_item_free(J)V+0 javafx.graphics@21
+j  com.sun.javafx.font.freetype.PangoGlyphLayout.layout(Lcom/sun/javafx/text/TextRun;Lcom/sun/javafx/font/PGFont;Lcom/sun/javafx/font/FontStrike;[C)V+474 javafx.graphics@21
+J 5299 c1 com.sun.javafx.text.PrismTextLayout.shape(Lcom/sun/javafx/text/TextRun;[CLcom/sun/javafx/text/GlyphLayout;)V javafx.graphics@21 (622 bytes) @ 0x00007ac4bceaf1cc [0x00007ac4bcead120+0x00000000000020ac]
+J 5149 c1 com.sun.javafx.text.PrismTextLayout.layout()V javafx.graphics@21 (1636 bytes) @ 0x00007ac4bce48294 [0x00007ac4bce47840+0x0000000000000a54]
+J 5245 c1 javafx.scene.text.Text.doComputeLayoutBounds()Ljavafx/geometry/Bounds; javafx.graphics@21 (134 bytes) @ 0x00007ac4bce90844 [0x00007ac4bce90260+0x00000000000005e4]
+J 5243 c1 com.sun.javafx.scene.shape.TextHelper.computeLayoutBoundsImpl(Ljavafx/scene/Node;)Ljavafx/geometry/Bounds; javafx.graphics@21 (10 bytes) @ 0x00007ac4bce8f72c [0x00007ac4bce8f540+0x00000000000001ec]
+J 5012 c1 com.okban.uiLayer.Implement.BuildingFeature.drawLabel(Ljavafx/scene/canvas/GraphicsContext;DDDLcom/okban/model/GraphStorage;)V com.okban (179 bytes) @ 0x00007ac4bcdf68cc [0x00007ac4bcdf58e0+0x0000000000000fec]
+J 5064 c1 com.okban.uiLayer.MapView.repaint()V com.okban (812 bytes) @ 0x00007ac4bce18354 [0x00007ac4bce14540+0x0000000000003e14]
+J 3776 c1 javafx.animation.AnimationTimer$AnimationTimerReceiver$$Lambda+0x00007ac4602354b8.run()Ljava/lang/Object; javafx.graphics@21 (12 bytes) @ 0x00007ac4bcb25dc4 [0x00007ac4bcb25c60+0x0000000000000164]
+J 3689 c1 javafx.animation.AnimationTimer$AnimationTimerReceiver.handle(J)V javafx.graphics@21 (39 bytes) @ 0x00007ac4bcae6a54 [0x00007ac4bcae6420+0x0000000000000634]
+J 3688 c1 com.sun.scenario.animation.AbstractPrimaryTimer.timePulseImpl(J)V javafx.graphics@21 (157 bytes) @ 0x00007ac4bcae2064 [0x00007ac4bcae1a20+0x0000000000000644]
+J 3685 c1 com.sun.scenario.animation.AbstractPrimaryTimer$MainLoop.run()V javafx.graphics@21 (61 bytes) @ 0x00007ac4bcae515c [0x00007ac4bcae4e40+0x000000000000031c]
+J 3684 c1 com.sun.javafx.tk.quantum.QuantumToolkit.pulse(Z)V javafx.graphics@21 (152 bytes) @ 0x00007ac4bcae35cc [0x00007ac4bcae2d80+0x000000000000084c]
+J 3421 c1 com.sun.javafx.tk.quantum.QuantumToolkit$$Lambda+0x00007ac460082518.run()V javafx.graphics@21 (8 bytes) @ 0x00007ac4bca3bb2c [0x00007ac4bca3b9e0+0x000000000000014c]
+J 4751 c1 com.sun.glass.ui.InvokeLaterDispatcher$Future.run()V javafx.graphics@21 (91 bytes) @ 0x00007ac4bcd6b51c [0x00007ac4bcd6b400+0x000000000000011c]
+v  ~StubRoutines::call_stub 0x00007ac4c3937cc6
+V  [libjvm.so+0x6c5eea]
+V  [libjvm.so+0x77133f]
+V  [libjvm.so+0x774a27]
+C  [libglassgtk3.so+0x16ec1]  JNIEnv_::CallVoidMethod(_jobject*, _jmethodID*, ...)+0x81
+C  [libglassgtk3.so+0x16f1c]
+C  [libgdk-3.so.0+0x20872]
+C  [libglib-2.0.so.0+0x5ef8d]
+C  [libglib-2.0.so.0+0x60657]
+C  [libglib-2.0.so.0+0x60a17]  g_main_loop_run+0x137
+C  [libgtk-3.so.0+0x36bc0f]  gtk_main+0x8f
+C  [libglassgtk3.so+0x172e2]  Java_com_sun_glass_ui_gtk_GtkApplication__1runLoop+0x52
+j  com.sun.glass.ui.gtk.GtkApplication._runLoop(Ljava/lang/Runnable;Z)V+0 javafx.graphics@21
+j  com.sun.glass.ui.gtk.GtkApplication.lambda$runLoop$10(Ljava/lang/Runnable;Z)V+7 javafx.graphics@21
+j  com.sun.glass.ui.gtk.GtkApplication$$Lambda+0x00007ac460037420.run()V+12 javafx.graphics@21
+j  java.lang.Thread.runWith(Ljava/lang/Object;Ljava/lang/Runnable;)V+5 java.base@21.0.9
+j  java.lang.Thread.run()V+19 java.base@21.0.9
+v  ~StubRoutines::call_stub 0x00007ac4c3937cc6
+V  [libjvm.so+0x6c5eea]
+V  [libjvm.so+0x6c79b1]
+V  [libjvm.so+0x7a0e52]
+V  [libjvm.so+0x6dde4a]
+V  [libjvm.so+0xd793f3]
+V  [libjvm.so+0xae851a]
+C  [libc.so.6+0x969cb]
+Java frames: (J=compiled Java code, j=interpreted, Vv=VM code)
+j  com.sun.javafx.font.freetype.OSPango.pango_item_free(J)V+0 javafx.graphics@21
+j  com.sun.javafx.font.freetype.PangoGlyphLayout.layout(Lcom/sun/javafx/text/TextRun;Lcom/sun/javafx/font/PGFont;Lcom/sun/javafx/font/FontStrike;[C)V+474 javafx.graphics@21
+J 5299 c1 com.sun.javafx.text.PrismTextLayout.shape(Lcom/sun/javafx/text/TextRun;[CLcom/sun/javafx/text/GlyphLayout;)V javafx.graphics@21 (622 bytes) @ 0x00007ac4bceaf1cc [0x00007ac4bcead120+0x00000000000020ac]
+J 5149 c1 com.sun.javafx.text.PrismTextLayout.layout()V javafx.graphics@21 (1636 bytes) @ 0x00007ac4bce48294 [0x00007ac4bce47840+0x0000000000000a54]
+J 5245 c1 javafx.scene.text.Text.doComputeLayoutBounds()Ljavafx/geometry/Bounds; javafx.graphics@21 (134 bytes) @ 0x00007ac4bce90844 [0x00007ac4bce90260+0x00000000000005e4]
+J 5243 c1 com.sun.javafx.scene.shape.TextHelper.computeLayoutBoundsImpl(Ljavafx/scene/Node;)Ljavafx/geometry/Bounds; javafx.graphics@21 (10 bytes) @ 0x00007ac4bce8f72c [0x00007ac4bce8f540+0x00000000000001ec]
+J 5012 c1 com.okban.uiLayer.Implement.BuildingFeature.drawLabel(Ljavafx/scene/canvas/GraphicsContext;DDDLcom/okban/model/GraphStorage;)V com.okban (179 bytes) @ 0x00007ac4bcdf68cc [0x00007ac4bcdf58e0+0x0000000000000fec]
+J 5064 c1 com.okban.uiLayer.MapView.repaint()V com.okban (812 bytes) @ 0x00007ac4bce18354 [0x00007ac4bce14540+0x0000000000003e14]
+J 3776 c1 javafx.animation.AnimationTimer$AnimationTimerReceiver$$Lambda+0x00007ac4602354b8.run()Ljava/lang/Object; javafx.graphics@21 (12 bytes) @ 0x00007ac4bcb25dc4 [0x00007ac4bcb25c60+0x0000000000000164]
+J 3689 c1 javafx.animation.AnimationTimer$AnimationTimerReceiver.handle(J)V javafx.graphics@21 (39 bytes) @ 0x00007ac4bcae6a54 [0x00007ac4bcae6420+0x0000000000000634]
+J 3688 c1 com.sun.scenario.animation.AbstractPrimaryTimer.timePulseImpl(J)V javafx.graphics@21 (157 bytes) @ 0x00007ac4bcae2064 [0x00007ac4bcae1a20+0x0000000000000644]
+J 3685 c1 com.sun.scenario.animation.AbstractPrimaryTimer$MainLoop.run()V javafx.graphics@21 (61 bytes) @ 0x00007ac4bcae515c [0x00007ac4bcae4e40+0x000000000000031c]
+J 3684 c1 com.sun.javafx.tk.quantum.QuantumToolkit.pulse(Z)V javafx.graphics@21 (152 bytes) @ 0x00007ac4bcae35cc [0x00007ac4bcae2d80+0x000000000000084c]
+J 3421 c1 com.sun.javafx.tk.quantum.QuantumToolkit$$Lambda+0x00007ac460082518.run()V javafx.graphics@21 (8 bytes) @ 0x00007ac4bca3bb2c [0x00007ac4bca3b9e0+0x000000000000014c]
+J 4751 c1 com.sun.glass.ui.InvokeLaterDispatcher$Future.run()V javafx.graphics@21 (91 bytes) @ 0x00007ac4bcd6b51c [0x00007ac4bcd6b400+0x000000000000011c]
+v  ~StubRoutines::call_stub 0x00007ac4c3937cc6
+j  com.sun.glass.ui.gtk.GtkApplication._runLoop(Ljava/lang/Runnable;Z)V+0 javafx.graphics@21
+j  com.sun.glass.ui.gtk.GtkApplication.lambda$runLoop$10(Ljava/lang/Runnable;Z)V+7 javafx.graphics@21
+j  com.sun.glass.ui.gtk.GtkApplication$$Lambda+0x00007ac460037420.run()V+12 javafx.graphics@21
+j  java.lang.Thread.runWith(Ljava/lang/Object;Ljava/lang/Runnable;)V+5 java.base@21.0.9
+j  java.lang.Thread.run()V+19 java.base@21.0.9
+v  ~StubRoutines::call_stub 0x00007ac4c3937cc6
+
+siginfo: si_signo: 11 (SIGSEGV), si_code: 1 (SEGV_MAPERR), si_addr: 0x00000a7805000008
+
+Registers:
+RAX=0x00000a7805000000, RBX=0x00000a7805000000, RCX=0x000000000000000a, RDX=0x0000000000000000
+RSP=0x00007ac40cf3e230, RBP=0x00007ac40cf3e250, RSI=0x00007ac41af9c3c0, RDI=0x00000a7805000000
+R8 =0x0000000000000000, R9 =0x000000072c08aee0, R10=0x00007ac4c3943991, R11=0x0000000707e59bf0
+R12=0x00007ac41af9c3c0, R13=0x0000000000000000, R14=0x00007ac40cf3e300, R15=0x00007ac4d452c830
+RIP=0x00007ac41b23eb73, EFLAGS=0x0000000000010206, CSGSFS=0x002b000000000033, ERR=0x0000000000000004
+  TRAPNO=0x000000000000000e
+
+XMM[0]=0x0000000000000000 0x0000000000000000
+XMM[1]=0x00007ac438139190 0x00007ac4d44d8eb0
+XMM[2]=0x0000000000000000 0x00007ac40cf3dee9
+XMM[3]=0x0000000000000000 0x00007ac4d452c830
+XMM[4]=0x0000000000000000 0x00007ac40c01f7ec
+XMM[5]=0x0000000000000000 0x0000000000000000
+XMM[6]=0x0000000000000000 0x00007ac40c0226a4
+XMM[7]=0x0000000000000000 0x0000000000000000
+XMM[8]=0x0000000000000000 0x0000000000000000
+XMM[9]=0x0000000000000000 0x000000003f800000
+XMM[10]=0x0000000000000000 0x0000000000000000
+XMM[11]=0x0000000000000000 0x0000000000000000
+XMM[12]=0x0000000000000000 0x0000000000000000
+XMM[13]=0x0000000000000000 0x4044000000000000
+XMM[14]=0x0000000000000000 0x0000000000000000
+XMM[15]=0x0000000000000000 0x0000000000000000
+  MXCSR=0x00001fa6
+
+
+Register to memory mapping:
+
+RAX=0x00000a7805000000 is an unknown value
+RBX=0x00000a7805000000 is an unknown value
+RCX=0x000000000000000a is an unknown value
+RDX=0x0 is null
+RSP=0x00007ac40cf3e230 is pointing into the stack for thread: 0x00007ac4d452c830
+RBP=0x00007ac40cf3e250 is pointing into the stack for thread: 0x00007ac4d452c830
+RSI=0x00007ac41af9c3c0: pango_attribute_destroy+0x0000000000000000 in /usr/lib/libpango-1.0.so.0 at 0x00007ac41af7f000
+RDI=0x00000a7805000000 is an unknown value
+R8 =0x0 is null
+R9 =0x000000072c08aee0 is an oop: com.sun.javafx.font.freetype.PangoGlyphString 
+{0x000000072c08aee0} - klass: 'com/sun/javafx/font/freetype/PangoGlyphString'
+ - ---- fields (total size 6 words):
+ - 'offset' 'I' @12  0 (0x00000000)
+ - 'font' 'J' @16  134982185440592 (0x00007ac3fd36d550)
+ - 'length' 'I' @24  0 (0x00000000)
+ - 'num_chars' 'I' @28  0 (0x00000000)
+ - 'num_glyphs' 'I' @32  11 (0x0000000b)
+ - 'glyphs' '[I' @36  [I{0x000000072c08ae20} (0xe58115c4)
+ - 'widths' '[I' @40  [I{0x000000072c08ae60} (0xe58115cc)
+ - 'log_clusters' '[I' @44  [I{0x000000072c08aea0} (0xe58115d4)
+R10=0x00007ac4c3943991 is at code_begin+1009 in an Interpreter codelet
+native method entry point (kind = native)  [0x00007ac4c39435a0, 0x00007ac4c3944010]  2672 bytes
+R11=0x0000000707e59bf0 is an oop: java.lang.Class 
+{0x0000000707e59bf0} - klass: 'java/lang/Class'
+ - ---- fields (total size 22 words):
+ - private volatile transient 'classRedefinedCount' 'I' @12  0 (0x00000000)
+ - injected 'klass' 'J' @16  134983845056208 (0x00007ac460228ed0)
+ - injected 'array_klass' 'J' @24  0 (0x0000000000000000)
+ - injected 'oop_size' 'I' @32  22 (0x00000016)
+ - injected 'static_oop_field_count' 'I' @36  0 (0x00000000)
+ - private volatile transient 'cachedConstructor' 'Ljava/lang/reflect/Constructor;' @40  null (0x00000000)
+ - private transient 'name' 'Ljava/lang/String;' @44  "com.sun.javafx.font.freetype.OSPango"{0x0000000707e5c000} (0xe0fcb800)
+ - private transient 'module' 'Ljava/lang/Module;' @48  a 'java/lang/Module'{0x00000007078a6fa0} (0xe0f14df4)
+ - private final 'classLoader' 'Ljava/lang/ClassLoader;' @52  a 'jdk/internal/loader/ClassLoaders$AppClassLoader'{0x00000007078a56b8} (0xe0f14ad7)
+ - private transient 'classData' 'Ljava/lang/Object;' @56  null (0x00000000)
+ - private transient 'packageName' 'Ljava/lang/String;' @60  "com.sun.javafx.font.freetype"{0x000000070761acc8} (0xe0ec3599)
+ - private final 'componentType' 'Ljava/lang/Class;' @64  null (0x00000000)
+ - private volatile transient 'reflectionData' 'Ljava/lang/ref/SoftReference;' @68  null (0x00000000)
+ - private volatile transient 'genericInfo' 'Lsun/reflect/generics/repository/ClassRepository;' @72  null (0x00000000)
+ - private volatile transient 'enumConstants' '[Ljava/lang/Object;' @76  null (0x00000000)
+ - private volatile transient 'enumConstantDirectory' 'Ljava/util/Map;' @80  null (0x00000000)
+ - private volatile transient 'annotationData' 'Ljava/lang/Class$AnnotationData;' @84  null (0x00000000)
+ - private volatile transient 'annotationType' 'Lsun/reflect/annotation/AnnotationType;' @88  null (0x00000000)
+ - transient 'classValueMap' 'Ljava/lang/ClassValue$ClassValueMap;' @92  null (0x00000000)
+ - injected 'protection_domain' 'Ljava/lang/Object;' @96  a 'java/security/ProtectionDomain'{0x00000007078a5f68} (0xe0f14bed)
+ - injected 'signers_name' 'Ljava/lang/Object;' @100  null (0x00000000)
+ - injected 'source_file' 'Ljava/lang/Object;' @104  null (0x00000000)
+ - injected '<init_lock>' 'Ljava/lang/Object;' @108  null (0x00000000)
+ - signature: Lcom/sun/javafx/font/freetype/OSPango;
+ - ---- static fields (0):
+ - static final 'PANGO_SCALE' 'I' @112  1024 (0x00000400)
+ - static final 'PANGO_STRETCH_ULTRA_CONDENSED' 'I' @116  0 (0x00000000)
+ - static final 'PANGO_STRETCH_EXTRA_CONDENSED' 'I' @120  1 (0x00000001)
+ - static final 'PANGO_STRETCH_CONDENSED' 'I' @124  2 (0x00000002)
+ - static final 'PANGO_STRETCH_SEMI_CONDENSED' 'I' @128  3 (0x00000003)
+ - static final 'PANGO_STRETCH_NORMAL' 'I' @132  4 (0x00000004)
+ - static final 'PANGO_STRETCH_SEMI_EXPANDED' 'I' @136  5 (0x00000005)
+ - static final 'PANGO_STRETCH_EXPANDED' 'I' @140  6 (0x00000006)
+ - static final 'PANGO_STRETCH_EXTRA_EXPANDED' 'I' @144  7 (0x00000007)
+ - static final 'PANGO_STRETCH_ULTRA_EXPANDED' 'I' @148  8 (0x00000008)
+ - static final 'PANGO_STYLE_ITALIC' 'I' @152  2 (0x00000002)
+ - static final 'PANGO_STYLE_NORMAL' 'I' @156  0 (0x00000000)
+ - static final 'PANGO_STYLE_OBLIQUE' 'I' @160  1 (0x00000001)
+ - static final 'PANGO_WEIGHT_BOLD' 'I' @164  700 (0x000002bc)
+ - static final 'PANGO_WEIGHT_NORMAL' 'I' @168  400 (0x00000190)
+ - static final 'PANGO_DIRECTION_RTL' 'I' @172  1 (0x00000001)
+R12=0x00007ac41af9c3c0: pango_attribute_destroy+0x0000000000000000 in /usr/lib/libpango-1.0.so.0 at 0x00007ac41af7f000
+R13=0x0 is null
+R14=0x00007ac40cf3e300 is pointing into the stack for thread: 0x00007ac4d452c830
+R15=0x00007ac4d452c830 is a thread
+
+Top of Stack: (sp=0x00007ac40cf3e230)
+0x00007ac40cf3e230:   000000072c08aee0 00007ac3fd37a7f0
+0x00007ac40cf3e240:   0000000000000000 00007ac454c72c30
+0x00007ac40cf3e250:   00007ac40cf3e270 00007ac41afa98dd
+0x00007ac40cf3e260:   0000000000000000 00007ac454c72c30
+0x00007ac40cf3e270:   00007ac40cf3e2d8 00007ac4c39439c0
+0x00007ac40cf3e280:   0000000000000007 00007ac454c734f0
+0x00007ac40cf3e290:   00007ac40cf3e290 0000000000000000
+0x00007ac40cf3e2a0:   0000000000000005 00007ac454c734f0
+0x00007ac40cf3e2b0:   0000000000000000 0000000707e59bf0
+0x00007ac40cf3e2c0:   00007ac454c72c30 0000000000000000
+0x00007ac40cf3e2d0:   00007ac40cf3e2f8 00007ac40cf3e350
+0x00007ac40cf3e2e0:   00007ac4c393f180 0000000707e59bf0
+0x00007ac40cf3e2f0:   00007ac4c3940fd7 00007ac3fd37a7f0
+0x00007ac40cf3e300:   0000000000000000 00007ac40cf3e308
+0x00007ac40cf3e310:   00007ac4549366da 000000000000002c
+0x00007ac40cf3e320:   00007ac454c70d58 00007ac454f88de8
+0x00007ac40cf3e330:   0000000707724b90 00007ac4549368a0
+0x00007ac40cf3e340:   00007ac40cf3e2f8 00007ac40cf3e4c0
+0x00007ac40cf3e350:   00007ac40cf3f220 00007ac4bceaf1cc
+0x00007ac40cf3e360:   0000000000000000 0000000000000000
+0x00007ac40cf3e370:   0000000000000000 0000000000000000
+0x00007ac40cf3e380:   0000000000000000 0000000000000000
+0x00007ac40cf3e390:   0000000000000000 0000000000000000
+0x00007ac40cf3e3a0:   0000000000000000 0000000000000000
+0x00007ac40cf3e3b0:   0000000000000000 0000000000000000
+0x00007ac40cf3e3c0:   00007ac3fd37a7f0 0000000000000000
+0x00007ac40cf3e3d0:   0000000000000000 000000072c08ae08
+0x00007ac40cf3e3e0:   0000000000000001 00007ac3fc16d6f0
+0x00007ac40cf3e3f0:   0000000000000000 00007ac3fc18879f
+0x00007ac40cf3e400:   0000000000000000 000000000000000d
+0x00007ac40cf3e410:   000000072c08ad98 000000072c08adc8
+0x00007ac40cf3e420:   00007ac3fc17cbf0 0000000000000000 
+
+Instructions: (pc=0x00007ac41b23eb73)
+0x00007ac41b23ea73:   00 00 66 66 2e 0f 1f 84 00 00 00 00 00 48 8b 7f
+0x00007ac41b23ea83:   08 83 c0 01 48 85 ff 74 0c 48 39 37 75 ef c3 66
+0x00007ac41b23ea93:   0f 1f 44 00 00 b8 ff ff ff ff c3 66 90 f3 0f 1e
+0x00007ac41b23eaa3:   fa 48 85 ff 74 17 0f 1f 80 00 00 00 00 48 89 f8
+0x00007ac41b23eab3:   48 8b 7f 08 48 85 ff 75 f4 c3 0f 1f 00 31 c0 c3
+0x00007ac41b23eac3:   66 90 66 66 2e 0f 1f 84 00 00 00 00 00 f3 0f 1e
+0x00007ac41b23ead3:   fa 48 85 f6 74 37 48 89 f0 48 85 ff 74 27 55 48
+0x00007ac41b23eae3:   89 e5 48 83 ec 10 48 89 75 f0 48 89 7d f8 67 e8
+0x00007ac41b23eaf3:   a9 ff ff ff 48 8b 75 f0 48 89 70 08 48 8b 45 f8
+0x00007ac41b23eb03:   c9 c3 0f 1f 00 c3 0f 1f 80 00 00 00 00 48 89 f8
+0x00007ac41b23eb13:   c3 90 66 66 2e 0f 1f 84 00 00 00 00 00 f3 0f 1e
+0x00007ac41b23eb23:   fa 31 c0 48 85 ff 74 15 0f 1f 44 00 00 48 8b 7f
+0x00007ac41b23eb33:   08 83 c0 01 48 85 ff 75 f4 c3 0f 1f 00 c3 0f 1f
+0x00007ac41b23eb43:   40 00 66 66 2e 0f 1f 84 00 00 00 00 00 f3 0f 1e
+0x00007ac41b23eb53:   fa 48 85 ff 74 37 55 48 89 e5 41 55 49 89 d5 41
+0x00007ac41b23eb63:   54 49 89 f4 53 48 89 fb 48 83 ec 08 90 48 89 d8
+0x00007ac41b23eb73:   48 8b 5b 08 4c 89 ee 48 8b 38 41 ff d4 48 85 db
+0x00007ac41b23eb83:   75 eb 48 83 c4 08 5b 41 5c 41 5d 5d c3 c3 0f 1f
+0x00007ac41b23eb93:   40 00 66 66 2e 0f 1f 84 00 00 00 00 00 f3 0f 1e
+0x00007ac41b23eba3:   fa 31 d2 e9 55 fb ff ff 0f 1f 44 00 00 f3 0f 1e
+0x00007ac41b23ebb3:   fa e9 47 fb ff ff 0f 1f 80 00 00 00 00 f3 0f 1e
+0x00007ac41b23ebc3:   fa c3 66 66 2e 0f 1f 84 00 00 00 00 00 f3 0f 1e
+0x00007ac41b23ebd3:   fa ff 25 0e 32 0d 00 66 0f 1f 44 00 00 f3 0f 1e
+0x00007ac41b23ebe3:   fa ff 25 7e 31 0d 00 66 0f 1f 44 00 00 f3 0f 1e
+0x00007ac41b23ebf3:   fa 55 48 89 e5 41 55 49 89 fd 41 54 41 89 f4 53
+0x00007ac41b23ec03:   89 d3 48 83 ec 18 89 da 44 89 e6 4c 89 ef 31 c0
+0x00007ac41b23ec13:   ff 15 5f 31 0d 00 89 c2 83 f8 ff 74 10 48 83 c4
+0x00007ac41b23ec23:   18 89 d0 5b 41 5c 41 5d 5d c3 0f 1f 00 89 45 dc
+0x00007ac41b23ec33:   ff 15 6f 2b 0d 00 8b 55 dc 83 38 04 74 c8 48 83
+0x00007ac41b23ec43:   c4 18 89 d0 5b 41 5c 41 5d 5d c3 66 90 f3 0f 1e
+0x00007ac41b23ec53:   fa ff 25 4e 31 0d 00 66 0f 1f 44 00 00 f3 0f 1e
+0x00007ac41b23ec63:   fa ff 25 c6 31 0d 00 66 0f 1f 44 00 00 f3 0f 1e 
+
+
+Stack slot to memory mapping:
+
+stack at sp + 0 slots: 0x000000072c08aee0 is an oop: com.sun.javafx.font.freetype.PangoGlyphString 
+{0x000000072c08aee0} - klass: 'com/sun/javafx/font/freetype/PangoGlyphString'
+ - ---- fields (total size 6 words):
+ - 'offset' 'I' @12  0 (0x00000000)
+ - 'font' 'J' @16  134982185440592 (0x00007ac3fd36d550)
+ - 'length' 'I' @24  0 (0x00000000)
+ - 'num_chars' 'I' @28  0 (0x00000000)
+ - 'num_glyphs' 'I' @32  11 (0x0000000b)
+ - 'glyphs' '[I' @36  [I{0x000000072c08ae20} (0xe58115c4)
+ - 'widths' '[I' @40  [I{0x000000072c08ae60} (0xe58115cc)
+ - 'log_clusters' '[I' @44  [I{0x000000072c08aea0} (0xe58115d4)
+stack at sp + 1 slots: 0x00007ac3fd37a7f0 points into unknown readable memory: 0x00000d95d9bc3600 | 00 36 bc d9 95 0d 00 00
+stack at sp + 2 slots: 0x0 is null
+stack at sp + 3 slots: {method} {0x00007ac454c72c30} 'pango_item_free' '(J)V' in 'com/sun/javafx/font/freetype/OSPango'
+stack at sp + 4 slots: 0x00007ac40cf3e270 is pointing into the stack for thread: 0x00007ac4d452c830
+stack at sp + 5 slots: 0x00007ac41afa98dd: pango_item_free+0x000000000000002d in /usr/lib/libpango-1.0.so.0 at 0x00007ac41af7f000
+stack at sp + 6 slots: 0x0 is null
+stack at sp + 7 slots: {method} {0x00007ac454c72c30} 'pango_item_free' '(J)V' in 'com/sun/javafx/font/freetype/OSPango'
+
+
+Compiled method (c1) 34266 5299       3       com.sun.javafx.text.PrismTextLayout::shape (622 bytes)
+ total in heap  [0x00007ac4bceacc10,0x00007ac4bceb0838] = 15400
+ relocation     [0x00007ac4bceacd68,0x00007ac4bcead0d8] = 880
+ constants      [0x00007ac4bcead0e0,0x00007ac4bcead120] = 64
+ main code      [0x00007ac4bcead120,0x00007ac4bceaf838] = 10008
+ stub code      [0x00007ac4bceaf838,0x00007ac4bceaf998] = 352
+ oops           [0x00007ac4bceaf998,0x00007ac4bceaf9a8] = 16
+ metadata       [0x00007ac4bceaf9a8,0x00007ac4bceafac8] = 288
+ scopes data    [0x00007ac4bceafac8,0x00007ac4bceb0160] = 1688
+ scopes pcs     [0x00007ac4bceb0160,0x00007ac4bceb06f0] = 1424
+ dependencies   [0x00007ac4bceb06f0,0x00007ac4bceb0730] = 64
+ nul chk table  [0x00007ac4bceb0730,0x00007ac4bceb0838] = 264
+
+
+[Constant Pool]
+             Address          hex4                    hex8      
+  0x00007ac4bcead0e0:   0x9999999a      0x3fe999999999999a      
+  0x00007ac4bcead0e4:   0x3fe99999                              
+  0x00007ac4bcead0e8:   0x00000000      0x3fe8000000000000      
+  0x00007ac4bcead0ec:   0x3fe80000                              
+  0x00007ac4bcead0f0:   0x00000000      0x3fe8000000000000      
+  0x00007ac4bcead0f4:   0x3fe80000                              
+  0x00007ac4bcead0f8:   0x00000000      0x3fe8000000000000      
+  0x00007ac4bcead0fc:   0x3fe80000                              
+  0x00007ac4bcead100:   0x00000000      0x3fe8000000000000      
+  0x00007ac4bcead104:   0x3fe80000                              
+  0x00007ac4bcead108:   0xf4f4f4f4      0xf4f4f4f4f4f4f4f4      
+  0x00007ac4bcead10c:   0xf4f4f4f4                              
+  0x00007ac4bcead110:   0xf4f4f4f4      0xf4f4f4f4f4f4f4f4      
+  0x00007ac4bcead114:   0xf4f4f4f4                              
+  0x00007ac4bcead118:   0xf4f4f4f4      0xf4f4f4f4f4f4f4f4      
+  0x00007ac4bcead11c:   0xf4f4f4f4                              
+
+[MachCode]
+[Entry Point]
+  # {method} {0x00007ac454793a70} 'shape' '(Lcom/sun/javafx/text/TextRun;[CLcom/sun/javafx/text/GlyphLayout;)V' in 'com/sun/javafx/text/PrismTextLayout'
+  # this:     rsi:rsi   = 'com/sun/javafx/text/PrismTextLayout'
+  # parm0:    rdx:rdx   = 'com/sun/javafx/text/TextRun'
+  # parm1:    rcx:rcx   = '[C'
+  # parm2:    r8:r8     = 'com/sun/javafx/text/GlyphLayout'
+  #           [sp+0x130]  (sp of caller)
+  0x00007ac4bcead120: ;   {no_reloc}
+  0x00007ac4bcead120: 448b 5608 | 49bb 0000 | 005f c47a | 0000 4d03 | d34c 3bd0 
+
+  0x00007ac4bcead134: ;   {runtime_call ic_miss_stub}
+  0x00007ac4bcead134: 0f85 467f | ad06 660f | 1f44 0000 
+[Verified Entry Point]
+  0x00007ac4bcead140: 8984 2400 | c0fe ff55 | 4881 ec20 | 0100 0090 | 4181 7f20 | 0200 0000 
+
+  0x00007ac4bcead158: ;   {runtime_call StubRoutines (final stubs)}
+  0x00007ac4bcead158: 7405 e841 | e3ab 0648 | 8974 2478 | 4889 9424 | 8000 0000 
+
+  0x00007ac4bcead16c: ;   {metadata(method data for {method} {0x00007ac454793a70} 'shape' '(Lcom/sun/javafx/text/TextRun;[CLcom/sun/javafx/text/GlyphLayout;)V' in 'com/sun/javafx/text/PrismTextLayout')}
+  0x00007ac4bcead16c: 48bf 6051 | f854 c47a | 0000 8b9f | f400 0000 | 83c3 0289 | 9ff4 0000 | 0081 e3fe | 0700 0085 
+  0x00007ac4bcead18c: db0f 8425 | 2100 008b | 7e2c 48c1 | e703 4885 
+
+  0x00007ac4bcead19c: ;   {metadata(method data for {method} {0x00007ac454793a70} 'shape' '(Lcom/sun/javafx/text/TextRun;[CLcom/sun/javafx/text/GlyphLayout;)V' in 'com/sun/javafx/text/PrismTextLayout')}
+  0x00007ac4bcead19c: ff48 bb60 | 51f8 54c4 | 7a00 0048 | c7c0 3801 | 0000 7407 | 48c7 c048 | 0100 004c | 8b0c 034d 
+  0x00007ac4bcead1bc: 8d49 014c | 890c 030f | 840d 0600 | 008b 7f0c 
+
+  0x00007ac4bcead1cc: ;   {metadata(method data for {method} {0x00007ac454793a70} 'shape' '(Lcom/sun/javafx/text/TextRun;[CLcom/sun/javafx/text/GlyphLayout;)V' in 'com/sun/javafx/text/PrismTextLayout')}
+  0x00007ac4bcead1cc: 85ff 48bf | 6051 f854 | c47a 0000 | 48c7 c368 | 0100 0074 | 0748 c7c3 | 5801 0000 | 488b 041f 
+  0x00007ac4bcead1ec: 488d 4001 | 4889 041f | 0f84 a820 | 0000 4c89 | 8424 9000 | 0000 4889 | 8c24 8800 | 0000 483b 
+  0x00007ac4bcead20c: 0248 8bfa 
+
+  0x00007ac4bcead210: ;   {metadata(method data for {method} {0x00007ac454793a70} 'shape' '(Lcom/sun/javafx/text/TextRun;[CLcom/sun/javafx/text/GlyphLayout;)V' in 'com/sun/javafx/text/PrismTextLayout')}
+  0x00007ac4bcead210: 48bb 6051 | f854 c47a 
+
+  0x00007ac4bcead218: ;   {metadata('com/sun/javafx/text/TextRun')}
+  0x00007ac4bcead218: 0000 49ba | a886 2260 | c47a 0000 | 4c89 9388 | 0100 0048 | 8383 9001 | 0000 018b | 7a4c 48c1 
+  0x00007ac4bcead238: e703 4889 | 7c24 7048 | 3b07 488b 
+
+  0x00007ac4bcead244: ;   {metadata(method data for {method} {0x00007ac454793a70} 'shape' '(Lcom/sun/javafx/text/TextRun;[CLcom/sun/javafx/text/GlyphLayout;)V' in 'com/sun/javafx/text/PrismTextLayout')}
+  0x00007ac4bcead244: df48 b860 | 51f8 54c4 | 7a00 008b | 5b08 49ba | 0000 005f | c47a 0000 | 4903 da48 | 3b98 c001 
+  0x00007ac4bcead264: 0000 750d | 4883 80c8 | 0100 0001 | e960 0000 | 0048 3b98 | d001 0000 | 750d 4883 | 80d8 0100 
+  0x00007ac4bcead284: 0001 e94a | 0000 0048 | 83b8 c001 | 0000 0075 | 1748 8998 | c001 0000 | 48c7 80c8 | 0100 0001 
+  0x00007ac4bcead2a4: 0000 00e9 | 2900 0000 | 4883 b8d0 | 0100 0000 | 7517 4889 | 98d0 0100 | 0048 c780 | d801 0000 
+  0x00007ac4bcead2c4: 0100 0000 | e908 0000 | 0048 8380 | b001 0000 | 0148 8bf7 | 0f1f 4400 | 0048 b8ff | ffff ffff 
+  0x00007ac4bcead2e4: ;   {virtual_call}
+  0x00007ac4bcead2e4: ffff ffe8 
+
+  0x00007ac4bcead2e8: ; ImmutableOopMap {[112]=Oop [120]=Oop [128]=Oop [136]=Oop [144]=Oop }
+                      ;*invokeinterface getFont {reexecute=0 rethrow=0 return_oop=0}
+                      ; - com.sun.javafx.text.PrismTextLayout::shape@24 (line 832)
+  0x00007ac4bcead2e8: 9483 ad06 
+
+  0x00007ac4bcead2ec: ;   {other}
+  0x00007ac4bcead2ec: 0f1f 8400 | dc06 0000 | 4885 c075 
+
+  0x00007ac4bcead2f8: ;   {metadata(method data for {method} {0x00007ac454793a70} 'shape' '(Lcom/sun/javafx/text/TextRun;[CLcom/sun/javafx/text/GlyphLayout;)V' in 'com/sun/javafx/text/PrismTextLayout')}
+  0x00007ac4bcead2f8: 1648 bb60 | 51f8 54c4 | 7a00 0080 | 8be1 0100 | 0001 e9e7 
+
+  0x00007ac4bcead30c: ;   {metadata('com/sun/javafx/font/PGFont')}
+  0x00007ac4bcead30c: 0000 0048 | bf70 620f | 60c4 7a00 | 008b 5808 | 49ba 0000 | 005f c47a | 0000 4903 | da48 3b7b 
+  0x00007ac4bcead32c: 200f 841a | 0000 0048 | 3bdf 0f84 | 1100 0000 
+
+  0x00007ac4bcead33c: ;   {runtime_call slow_subtype_check Runtime1 stub}
+  0x00007ac4bcead33c: 5357 e83d | aab9 065b | 5b85 db0f | 848d 0000 
+
+  0x00007ac4bcead34c: ;   {metadata(method data for {method} {0x00007ac454793a70} 'shape' '(Lcom/sun/javafx/text/TextRun;[CLcom/sun/javafx/text/GlyphLayout;)V' in 'com/sun/javafx/text/PrismTextLayout')}
+  0x00007ac4bcead34c: 0048 bb60 | 51f8 54c4 | 7a00 008b | 7808 49ba | 0000 005f | c47a 0000 | 4903 fa48 | 3bbb f801 
+  0x00007ac4bcead36c: 0000 750d | 4883 8300 | 0200 0001 | e979 0000 | 0048 3bbb | 0802 0000 | 750d 4883 | 8310 0200 
+  0x00007ac4bcead38c: 0001 e963 | 0000 0048 | 83bb f801 | 0000 0075 | 1748 89bb | f801 0000 | 48c7 8300 | 0200 0001 
+  0x00007ac4bcead3ac: 0000 00e9 | 4200 0000 | 4883 bb08 | 0200 0000 | 7517 4889 | bb08 0200 | 0048 c783 | 1002 0000 
+  0x00007ac4bcead3cc: 0100 0000 | e921 0000 | 00e9 1c00 
+
+  0x00007ac4bcead3d8: ;   {metadata(method data for {method} {0x00007ac454793a70} 'shape' '(Lcom/sun/javafx/text/TextRun;[CLcom/sun/javafx/text/GlyphLayout;)V' in 'com/sun/javafx/text/PrismTextLayout')}
+  0x00007ac4bcead3d8: 0000 48bb | 6051 f854 | c47a 0000 | 4883 abe8 | 0100 0001 | e9f7 1e00 | 00e9 0000 | 0000 488b 
+  0x00007ac4bcead3f8: f848 85ff 
+
+  0x00007ac4bcead3fc: ;   {metadata(method data for {method} {0x00007ac454793a70} 'shape' '(Lcom/sun/javafx/text/TextRun;[CLcom/sun/javafx/text/GlyphLayout;)V' in 'com/sun/javafx/text/PrismTextLayout')}
+  0x00007ac4bcead3fc: 48be 6051 | f854 c47a | 0000 48c7 | c320 0200 | 0075 0748 | c7c3 3002 | 0000 488b | 041e 488d 
+  0x00007ac4bcead41c: 4001 4889 | 041e 0f85 | 3002 0000 | 488b 7c24 | 7048 8bf7 
+
+  0x00007ac4bcead430: ;   {metadata(method data for {method} {0x00007ac454793a70} 'shape' '(Lcom/sun/javafx/text/TextRun;[CLcom/sun/javafx/text/GlyphLayout;)V' in 'com/sun/javafx/text/PrismTextLayout')}
+  0x00007ac4bcead430: 48bb 6051 | f854 c47a | 0000 8b76 | 0849 ba00 | 0000 5fc4 | 7a00 0049 | 03f2 483b | b350 0200 
+  0x00007ac4bcead450: 0075 0d48 | 8383 5802 | 0000 01e9 | 6000 0000 | 483b b360 | 0200 0075 | 0d48 8383 | 6802 0000 
+  0x00007ac4bcead470: 01e9 4a00 | 0000 4883 | bb50 0200 | 0000 7517 | 4889 b350 | 0200 0048 | c783 5802 | 0000 0100 
+  0x00007ac4bcead490: 0000 e929 | 0000 0048 | 83bb 6002 | 0000 0075 | 1748 89b3 | 6002 0000 | 48c7 8368 | 0200 0001 
+  0x00007ac4bcead4b0: 0000 00e9 | 0800 0000 | 4883 8340 | 0200 0001 | 488b f766 | 9048 b8ff | ffff ffff 
+
+  0x00007ac4bcead4cc: ;   {virtual_call}
+  0x00007ac4bcead4cc: ffff ffe8 
+
+  0x00007ac4bcead4d0: ; ImmutableOopMap {[112]=Oop [128]=Oop }
+                      ;*invokeinterface getBounds {reexecute=0 rethrow=0 return_oop=0}
+                      ; - com.sun.javafx.text.PrismTextLayout::shape@41 (line 834)
+  0x00007ac4bcead4d0: 

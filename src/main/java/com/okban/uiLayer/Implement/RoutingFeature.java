@@ -123,120 +123,143 @@ public class RoutingFeature {
 
             lastX = x1;
             lastY = y1;
-
             List<Pair<Integer, Integer>> dPairs = dResult.path;
+            if (dPairs != null) {
+                if (snap1.getNode1() == snap2.getNode1() && snap1.getNode2() == snap2.getNode2()
+                        && (snap1.getWayflags() & WayFlags.ONEWAY.getValue()) == 0) {
+                    for (int i = 0; i < dPairs.size(); i++) {
+                        double x = (graphStorage.getNodeX(dPairs.get(i).getKey()) + 512 - cameraX) * zoom;
+                        double y = (graphStorage.getNodeY(dPairs.get(i).getKey()) + 512 - cameraY) * zoom;
 
-            int node1 = dPairs.getFirst().key;
+                        double dx = x - lastX;
+                        double dy = y - lastY;
 
-            if (node1 == snap1.getNode1()) {
-                if (node1 != snap1.getNearest1()) {
-                    int ai = snap1.getOffset1();
-                    while (true) {
-                        int nodeIndex = shapeNodes[ai];
-                        if (node1 == nodeIndex)
-                            break;
-                        double x = (graphStorage.getNodeX(nodeIndex) + 512 - cameraX) * zoom;
-                        double y = (graphStorage.getNodeY(nodeIndex) + 512 - cameraY) * zoom;
-
-                        gc.lineTo(x, y);
-
-                        lastX = x;
-                        lastY = y;
-
-                        ai--;
-                    }
-                }
-            } else if (node1 == snap1.getNode2()) {
-                if (node1 != snap1.getNearest2()) {
-                    int bi = snap1.getOffset2();
-                    while (true) {
-                        int nodeIndex = shapeNodes[bi];
-                        if (node1 == nodeIndex)
-                            break;
-                        double x = (graphStorage.getNodeX(nodeIndex) + 512 - cameraX) * zoom;
-                        double y = (graphStorage.getNodeY(nodeIndex) + 512 - cameraY) * zoom;
+                        if (zoom < 1.5 && dx * dx + dy * dy < 4) {
+                            continue;
+                        }
 
                         gc.lineTo(x, y);
 
                         lastX = x;
                         lastY = y;
-
-                        bi++;
                     }
-                }
-            }
+                } else {
 
-            for (int index = 1; index < dPairs.size(); index++) {
-                int edgeId = dPairs.get(index).getValue();
-                int[] shapeNodeIds = graphStorage.getShapeNodeIds(edgeId);
+                    int node1 = dPairs.getFirst().key;
 
-                if (shapeNodeIds.length == 0)
-                    continue;
+                    if (node1 == snap1.getNode1()) {
+                        if (node1 != snap1.getNearest1()) {
+                            int ai = snap1.getOffset1();
+                            while (true) {
+                                int nodeIndex = shapeNodes[ai];
+                                if (node1 == nodeIndex)
+                                    break;
+                                double x = (graphStorage.getNodeX(nodeIndex) + 512 - cameraX) * zoom;
+                                double y = (graphStorage.getNodeY(nodeIndex) + 512 - cameraY) * zoom;
 
-                boolean reverse = graphStorage.isReverse(edgeId);
-                boolean isOneWay = (graphStorage.getWayflag(edgeId) & WayFlags.ONEWAY.getValue()) != 0;
+                                gc.lineTo(x, y);
 
-                int startIdx = reverse ? shapeNodeIds.length - 1 : 0;
-                int endIdx = reverse ? -1 : shapeNodeIds.length;
-                int step = reverse ? -1 : 1;
+                                lastX = x;
+                                lastY = y;
 
-                for (int i = startIdx; i != endIdx; i += step) {
+                                ai--;
+                            }
+                        }
+                    } else if (node1 == snap1.getNode2()) {
+                        if (node1 != snap1.getNearest2()) {
+                            int bi = snap1.getOffset2();
+                            while (true) {
+                                int nodeIndex = shapeNodes[bi];
+                                if (node1 == nodeIndex)
+                                    break;
+                                double x = (graphStorage.getNodeX(nodeIndex) + 512 - cameraX) * zoom;
+                                double y = (graphStorage.getNodeY(nodeIndex) + 512 - cameraY) * zoom;
 
-                    double x = (graphStorage.getNodeX(shapeNodeIds[i]) + 512 - cameraX) * zoom;
-                    double y = (graphStorage.getNodeY(shapeNodeIds[i]) + 512 - cameraY) * zoom;
+                                gc.lineTo(x, y);
 
-                    double dx = x - lastX;
-                    double dy = y - lastY;
+                                lastX = x;
+                                lastY = y;
 
-                    if (zoom < 1.5 && dx * dx + dy * dy < 4) {
-                        continue;
+                                bi++;
+                            }
+                        }
                     }
 
-                    gc.lineTo(x, y);
+                    for (int index = 1; index < dPairs.size(); index++) {
+                        Integer edgeId = dPairs.get(index).getValue();
+                        if (edgeId == null)
+                            continue;
+                        int[] shapeNodeIds = graphStorage.getShapeNodeIds(edgeId);
 
-                    if (isOneWay) {
-                        drawArrow(gc, lastX, lastY, x, y, zoom);
+                        if (shapeNodeIds.length == 0)
+                            continue;
+
+                        boolean reverse = graphStorage.isReverse(edgeId);
+                        boolean isOneWay = (graphStorage.getWayflag(edgeId) & WayFlags.ONEWAY.getValue()) != 0;
+
+                        int startIdx = reverse ? shapeNodeIds.length - 1 : 0;
+                        int endIdx = reverse ? -1 : shapeNodeIds.length;
+                        int step = reverse ? -1 : 1;
+
+                        for (int i = startIdx; i != endIdx; i += step) {
+
+                            double x = (graphStorage.getNodeX(shapeNodeIds[i]) + 512 - cameraX) * zoom;
+                            double y = (graphStorage.getNodeY(shapeNodeIds[i]) + 512 - cameraY) * zoom;
+
+                            double dx = x - lastX;
+                            double dy = y - lastY;
+
+                            if (zoom < 1.5 && dx * dx + dy * dy < 4) {
+                                continue;
+                            }
+
+                            gc.lineTo(x, y);
+
+                            if (isOneWay) {
+                                drawArrow(gc, lastX, lastY, x, y, zoom);
+                            }
+
+                            lastX = x;
+                            lastY = y;
+                        }
                     }
 
-                    lastX = x;
-                    lastY = y;
-                }
-            }
+                    int node2 = dPairs.getLast().key;
 
-            int node2 = dPairs.getLast().key;
+                    if (node2 == snap2.getNode1()) {
+                        if (node2 != snap2.getNearest1()) {
 
-            if (node2 == snap2.getNode1()) {
-                if (node2 != snap2.getNearest1()) {
+                            for (int ai = snap2.getLen1(); ai >= 0; ai--) {
+                                int nodeIndex = shapeNodes[snap2.getOffset1() - ai];
+                                if (node2 == snap2.getNearest1())
+                                    break;
+                                double x = (graphStorage.getNodeX(nodeIndex) + 512 - cameraX) * zoom;
+                                double y = (graphStorage.getNodeY(nodeIndex) + 512 - cameraY) * zoom;
 
-                    for (int ai = snap2.getLen1(); ai >= 0; ai--) {
-                        int nodeIndex = shapeNodes[snap2.getOffset1() - ai];
-                        if (node2 == snap2.getNearest1())
-                            break;
-                        double x = (graphStorage.getNodeX(nodeIndex) + 512 - cameraX) * zoom;
-                        double y = (graphStorage.getNodeY(nodeIndex) + 512 - cameraY) * zoom;
+                                gc.lineTo(x, y);
 
-                        gc.lineTo(x, y);
+                                lastX = x;
+                                lastY = y;
 
-                        lastX = x;
-                        lastY = y;
+                            }
+                        }
+                    } else if (node2 == snap2.getNode2()) {
+                        if (node2 != snap2.getNearest2()) {
 
-                    }
-                }
-            } else if (node2 == snap2.getNode2()) {
-                if (node2 != snap2.getNearest2()) {
+                            for (int bi = snap2.getLen2(); bi >= 0; bi--) {
+                                int nodeIndex = shapeNodes[snap2.getOffset2() + bi];
+                                if (node2 == snap2.getNearest2())
+                                    break;
+                                double x = (graphStorage.getNodeX(nodeIndex) + 512 - cameraX) * zoom;
+                                double y = (graphStorage.getNodeY(nodeIndex) + 512 - cameraY) * zoom;
 
-                    for (int bi = snap2.getLen2(); bi >= 0; bi--) {
-                        int nodeIndex = shapeNodes[snap2.getOffset2() + bi];
-                        if (node2 == snap2.getNearest2())
-                            break;
-                        double x = (graphStorage.getNodeX(nodeIndex) + 512 - cameraX) * zoom;
-                        double y = (graphStorage.getNodeY(nodeIndex) + 512 - cameraY) * zoom;
+                                gc.lineTo(x, y);
 
-                        gc.lineTo(x, y);
+                                lastX = x;
+                                lastY = y;
 
-                        lastX = x;
-                        lastY = y;
-
+                            }
+                        }
                     }
                 }
             }

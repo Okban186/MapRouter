@@ -46,6 +46,10 @@ public abstract class MapFeature {
         return layer;
     }
 
+    public String getName() {
+        return name;
+    }
+
     public int getSegmentOffSet() {
         return segmentOffset;
     }

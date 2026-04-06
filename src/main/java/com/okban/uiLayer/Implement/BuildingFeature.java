@@ -88,20 +88,20 @@ public class BuildingFeature extends MapFeature {
 
             gc.setFont(Font.font(9));
             gc.setFill(Color.RED);
+
             double x = (boundingBox.getMinX() + boundingBox.getMaxX()) / 2;
             double y = (boundingBox.getMinY() + boundingBox.getMaxY()) / 2;
 
             double screenX = (x + 512 - cameraX) * zoom;
             double screenY = (y + 512 - cameraY) * zoom;
 
-            Text text = new Text(name);
-            text.setFont(gc.getFont());
-            double textWidth = text.getLayoutBounds().getWidth();
-            double textHeight = text.getLayoutBounds().getHeight();
+            double textWidth = name.length() * 5;
+            double textHeight = 9;
 
             gc.fillText(name,
                     screenX - textWidth / 2,
                     screenY + textHeight / 4);
+
             gc.restore();
         }
     }

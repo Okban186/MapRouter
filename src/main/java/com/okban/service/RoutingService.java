@@ -5,6 +5,7 @@ import java.util.BitSet;
 import java.util.List;
 import java.util.Random;
 
+import com.okban.Enum.WayFlags;
 import com.okban.algorithm.Dijkstra;
 import com.okban.dto.DijkstraResult;
 import com.okban.dto.Pair;
@@ -23,6 +24,12 @@ public class RoutingService {
     private List<DijkstraResult> routingPaths;
     private GraphStorage graphStorage;
     private MapView mapView;
+    public double worldWidth = 100_000;
+    public double worldHeight = 100_000;
+    private double minLon = 106.30;
+    private double maxLon = 107.10;
+    private double minLat = 10.30;
+    private double maxLat = 11.20;
 
     public RoutingService(List<SnapContext> snapContexts, MapView mapView) {
         this.snapContexts = snapContexts;
@@ -42,15 +49,85 @@ public class RoutingService {
         routingPaths = new ArrayList<>();
         if (snapContexts.size() <= 1)
             return;
-
+        int[] shapeNodes = graphStorage.getShapeNodes();
         for (int i = 0; i < snapContexts.size(); i++) {
             for (int j = 0; j < snapContexts.size(); j++) {
                 if (i == j)
                     continue;
-                routingPaths.add(getRoutingPath(snapContexts.get(i), snapContexts.get(j)));
+                SnapContext snap1 = snapContexts.get(i);
+                SnapContext snap2 = snapContexts.get(j);
+                if (snap1.getNode1() == snap2.getNode1() && snap1.getNode2() == snap2.getNode2()) {
+                    if (snap1.getNearest1() == snap2.getNearest1() && snap1.getNearest2() == snap2.getNearest2()) {
+                        double xRatio1 = snap1.getX() / worldWidth;
+                        double yRatio1 = snap1.getY() / worldHeight;
+
+                        double wLon1 = xRatio1 * (maxLon - minLon) + minLon;
+                        double wLat1 = (yRatio1 * (maxLat - minLat) - maxLat) * -1;
+
+                        double xRatio2 = snap2.getX() / worldWidth;
+                        double yRatio2 = snap2.getY() / worldHeight;
+
+                        double wLon2 = xRatio2 * (maxLon - minLon) + minLon;
+                        double wLat2 = (yRatio2 * (maxLat - minLat) - maxLat) * -1;
+
+                        double cost = haversineDistance(wLat1, wLon1, wLat2, wLon2);
+
+                        if ((snap1.getWayflags() & WayFlags.ONEWAY.getValue()) == 0
+                                || snap1.getDist1() < snap2.getDist1()) {
+                            routingPaths.add(new DijkstraResult(null, snap1, snap2, cost));
+                        } else if (snap1.getDist1() > snap2.getDist1()) {
+                            routingPaths.add(getRoutingPath(snap1, snap2));
+                        }
+                    } else if (snap1.getDist1() < snap2.getDist1()) {
+
+                        double cost = snap2.getDist1() - snap1.getDist1();
+                        System.out.println(cost);
+                        List<Pair<Integer, Integer>> paths = new ArrayList<>();
+                        for (int index = snap1.getOffset2(); index <= snap2.getOffset1(); index++) {
+                            paths.add(new Pair<Integer, Integer>(shapeNodes[index], null));
+
+                        }
+
+                        routingPaths.add(new DijkstraResult(paths, snap1, snap2, cost));
+
+                    } else {
+                        if ((snap1.getWayflags() & WayFlags.ONEWAY.getValue()) == 0) {
+                            double cost = snap1.getDist1() - snap2.getDist1();
+                            System.out.println(cost);
+                            List<Pair<Integer, Integer>> paths = new ArrayList<>();
+                            for (int index = snap1.getOffset1(); index >= snap2.getOffset2(); index--) {
+                                paths.add(new Pair<Integer, Integer>(shapeNodes[index], null));
+
+                            }
+
+                            routingPaths.add(new DijkstraResult(paths, snap1, snap2, cost));
+                        } else {
+                            routingPaths.add(getRoutingPath(snap1, snap2));
+                        }
+                    }
+                } else
+                    routingPaths.add(getRoutingPath(snap1, snap2));
             }
         }
 
+    }
+
+    public static double haversineDistance(double lat1, double lon1, double lat2, double lon2) {
+        // Công thức Haversine
+        final double R = 6371000;
+
+        double phi1 = Math.toRadians(lat1);
+        double phi2 = Math.toRadians(lat2);
+        double dPhi = Math.toRadians(lat2 - lat1);
+        double dLambda = Math.toRadians(lon2 - lon1);
+
+        double a = Math.sin(dPhi / 2) * Math.sin(dPhi / 2)
+                + Math.cos(phi1) * Math.cos(phi2)
+                        * Math.sin(dLambda / 2) * Math.sin(dLambda / 2);
+
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return R * c;
     }
 
     public RoutingFeature GTS() {
@@ -132,26 +209,37 @@ public class RoutingService {
             maxY = Math.max(maxY, snap2.getY());
 
             List<Pair<Integer, Integer>> dPairs = dResult.path;
+            if (dPairs == null)
+                continue;
 
             for (int index = 0; index < dPairs.size(); index++) {
-                int edgeId = dPairs.get(index).getValue();
-                int[] shapeNodeIds = graphStorage.getShapeNodeIds(edgeId);
-
-                if (shapeNodeIds.length == 0)
-                    continue;
-
-                for (int nodeId : shapeNodeIds) {
-                    double x = graphStorage.getNodeX(nodeId);
-                    double y = graphStorage.getNodeY(nodeId);
+                Integer edgeId = dPairs.get(index).getValue();
+                if (edgeId == null) {
+                    double x = graphStorage.getNodeX(dPairs.get(index).getKey());
+                    double y = graphStorage.getNodeY(dPairs.get(index).getKey());
 
                     minX = Math.min(minX, x);
                     minY = Math.min(minY, y);
                     maxX = Math.max(maxX, x);
                     maxY = Math.max(maxY, y);
+                } else {
+                    int[] shapeNodeIds = graphStorage.getShapeNodeIds(edgeId);
+
+                    if (shapeNodeIds.length == 0)
+                        continue;
+
+                    for (int nodeId : shapeNodeIds) {
+                        double x = graphStorage.getNodeX(nodeId);
+                        double y = graphStorage.getNodeY(nodeId);
+
+                        minX = Math.min(minX, x);
+                        minY = Math.min(minY, y);
+                        maxX = Math.max(maxX, x);
+                        maxY = Math.max(maxY, y);
+                    }
                 }
             }
         }
-
         BoundingBox boundingBox = new BoundingBox(minX, minY, maxX - minX, maxY - minY);
 
         int minTileX = (int) (minX / mapView.TILE_WIDTH);

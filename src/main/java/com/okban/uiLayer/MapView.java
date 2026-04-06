@@ -14,6 +14,7 @@ import com.okban.uiLayer.Implement.RoadFeature;
 import com.okban.uiLayer.Implement.RoutingFeature;
 
 import javafx.animation.AnimationTimer;
+import javafx.animation.PauseTransition;
 import javafx.geometry.Point2D;
 import javafx.scene.Parent;
 import javafx.scene.canvas.Canvas;
@@ -24,6 +25,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import javafx.util.Duration;
 
 public class MapView {
     private Pane map;
@@ -58,6 +60,7 @@ public class MapView {
     private double dragAccumY = 0;
     private List<SnapContext> snapContexts;
     private boolean needRender = false;
+    private boolean isScrolling = false;
 
     private OsmDataResult dataWrapper;
 
@@ -153,6 +156,7 @@ public class MapView {
     }
 
     public void repaint() {
+
         List<MapFeature>[][] bucketMap = dataWrapper.tileIndexs;
         if (bucketMap == null || zoom <= 0)
             return;
@@ -199,27 +203,29 @@ public class MapView {
             }
         }
         int number = 1;
-        for (SnapContext snap : snapContexts) {
-            if (routingLine)
-                break;
-            int tileX = (int) (snap.getX() / TILE_WIDTH);
-            int tileY = (int) (snap.getY() / TILE_HEIGHT);
-            if (tileX <= maxTileX && tileX >= minTileX && tileY >= minTileY && tileY <= maxTileY) {
-                double x = (snap.getX() + 512 - cameraX) * zoom;
-                double y = (snap.getY() + 512 - cameraY) * zoom;
-                gcOverlay.save();
-                gcOverlay.setFill(Color.RED);
+        if (snapContexts != null && snapContexts.size() > 0) {
+            for (SnapContext snap : snapContexts) {
+                if (routingLine)
+                    break;
+                int tileX = (int) (snap.getX() / TILE_WIDTH);
+                int tileY = (int) (snap.getY() / TILE_HEIGHT);
+                if (tileX <= maxTileX && tileX >= minTileX && tileY >= minTileY && tileY <= maxTileY) {
+                    double x = (snap.getX() + 512 - cameraX) * zoom;
+                    double y = (snap.getY() + 512 - cameraY) * zoom;
+                    gcOverlay.save();
+                    gcOverlay.setFill(Color.RED);
 
-                gcOverlay.fillOval(x, y, 4, 4);
-                gcOverlay.restore();
-                gcOverlay.save();
-                gcOverlay.setFill(Color.RED); // màu khác
-                gcOverlay.setFont(Font.font("Arial", FontWeight.BOLD, 12));
-                gcOverlay.fillText(String.valueOf(number++), x - 4, y - 4);
+                    gcOverlay.fillOval(x, y, 4, 4);
+                    gcOverlay.restore();
+                    gcOverlay.save();
+                    gcOverlay.setFill(Color.RED); // màu khác
+                    gcOverlay.setFont(Font.font("Arial", FontWeight.BOLD, 12));
+                    gcOverlay.fillText(String.valueOf(number++), x - 4, y - 4);
 
-                gcOverlay.restore();
+                    gcOverlay.restore();
+                }
+
             }
-
         }
 
         for (int tx = minTileX; tx <= maxTileX; tx++) {
@@ -326,7 +332,7 @@ public class MapView {
         });
 
         map.setOnMouseClicked(e -> {
-            if (isDragg)
+            if (isDragg || isScrolling)
                 return;
 
             Point2D clicked = lineOverlay.sceneToLocal(e.getSceneX(), e.getSceneY());
@@ -375,11 +381,17 @@ public class MapView {
                         int len = feature.getSegmentLen();
                         double threshold = 0;
                         if (feature instanceof RoadFeature roadFeature)
-                            threshold = Math.min(roadFeature.getHighwayWidth() * zoom, 60);
+                            threshold = Math.min(roadFeature.getHighwayWidth() * zoom, 150);
                         else
                             continue;
 
                         int wayflags = feature.getWayflags();
+                        if ((wayflags & WayFlags.FOOTWAY.getValue()) != 0
+                                || (wayflags & WayFlags.BUILDING.getValue()) != 0) {
+
+                            continue;
+                        }
+
                         for (int index = offset; index < offset + len - 1; index++) {
                             int aIndex = shapeNodes[index];
                             int bIndex = shapeNodes[index + 1];
@@ -415,12 +427,14 @@ public class MapView {
                             double dx = wx - hx;
                             double dy = wy - hy;
 
-                            double dist2 = dx * dx + dy * dy;
+                            double dxScreen = dx * zoom;
+                            double dyScreen = dy * zoom;
 
-                            if (dist2 * zoom <= threshold) {
-                                if ((wayflags & WayFlags.FOOTWAY.getValue()) != 0)
-                                    break;
+                            double dist2 = dxScreen * dxScreen + dyScreen * dyScreen;
 
+                            if (dist2 <= ((threshold / 2) * (threshold / 2))) {
+
+                                System.out.println(feature.getName());
                                 double distA = 0;
                                 double distB = 0;
                                 int nearest1 = aIndex;
@@ -453,7 +467,7 @@ public class MapView {
                                     int temp = offset2;
                                     for (int bi = index + 2; bi < offset + len; bi++) {
                                         len2++;
-                                        distA += haversineDistance(graphStorage.getNodeLat(shapeNodes[temp]),
+                                        distB += haversineDistance(graphStorage.getNodeLat(shapeNodes[temp]),
                                                 graphStorage.getNodeLon(shapeNodes[temp]),
                                                 graphStorage.getNodeLat(shapeNodes[bi]),
                                                 graphStorage.getNodeLon(shapeNodes[bi]));
@@ -482,7 +496,7 @@ public class MapView {
 
         });
         map.setOnScroll(e -> {
-
+            isScrolling = true;
             scrollAccumulator += e.getDeltaY();
 
             if (scrollAccumulator > 40) {
@@ -519,6 +533,9 @@ public class MapView {
 
             clampCamera();
             needRender = true;
+            PauseTransition scrollPause = new PauseTransition(Duration.millis(300));
+            scrollPause.setOnFinished(p -> isScrolling = false);
+            scrollPause.play();
         });
     }
 

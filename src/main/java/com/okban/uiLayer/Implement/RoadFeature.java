@@ -45,7 +45,7 @@ public class RoadFeature extends MapFeature {
         gc.setLineCap(StrokeLineCap.ROUND);
         gc.beginPath();
         gc.setStroke(Color.web(highwayType.getHexColor()));
-        gc.setLineWidth(Math.min(highwayType.getWidth() * zoom, 60));
+        gc.setLineWidth(Math.min(highwayType.getWidth() * zoom, 300));
         int shapeNodes[] = graphStorage.getShapeNodes();
         for (int i = segmentOffset; i < segmentLen + segmentOffset; i++) {
 
@@ -77,98 +77,104 @@ public class RoadFeature extends MapFeature {
     @Override
     public void drawLabel(GraphicsContext gc, double cameraX, double cameraY, double zoom, GraphStorage graphStorage) {
 
-        if (name != null && zoom > 2) {
-            gc.setLineWidth(1);
-            gc.save();
-            gc.setStroke(Color.AQUA);
-            gc.setFill(Color.RED);
-            double maxLength = 0;
+        if (name == null || zoom <= 1.5)
+            return;
 
-            int bestAIndex = -1;
-            int bestBIndex = -1;
-            boolean flipped = false;
-            int shapeNodes[] = graphStorage.getShapeNodes();
-            for (int i = segmentOffset; i < segmentLen + segmentOffset - 1; i++) {
+        gc.save();
+        gc.setLineWidth(1);
+        gc.setStroke(Color.AQUA);
+        gc.setFill(Color.RED);
 
-                int aIndex = shapeNodes[i];
-                int bIndex = shapeNodes[i + 1];
+        double maxLength = 0;
+        int bestAIndex = -1;
+        int bestBIndex = -1;
+        boolean flipped = false;
 
-                double dx = graphStorage.getNodeX(bIndex) - graphStorage.getNodeX(aIndex);
-                double dy = graphStorage.getNodeY(bIndex) - graphStorage.getNodeY(aIndex);
+        int shapeNodes[] = graphStorage.getShapeNodes();
 
-                double len = dx * dx + dy * dy;
+        for (int i = segmentOffset; i < segmentLen + segmentOffset - 1; i++) {
 
-                if (len > maxLength) {
-                    maxLength = len;
-                    bestAIndex = aIndex;
-                    bestBIndex = bIndex;
-                }
+            int aIndex = shapeNodes[i];
+            int bIndex = shapeNodes[i + 1];
+
+            double dx = graphStorage.getNodeX(bIndex) - graphStorage.getNodeX(aIndex);
+            double dy = graphStorage.getNodeY(bIndex) - graphStorage.getNodeY(aIndex);
+
+            double len = dx * dx + dy * dy;
+
+            if (len > maxLength) {
+                maxLength = len;
+                bestAIndex = aIndex;
+                bestBIndex = bIndex;
             }
-
-            Text text = new Text(name);
-            text.setFont(gc.getFont());
-            double textWidth = text.getLayoutBounds().getWidth();
-
-            double segmentLength = Math.sqrt(maxLength) * zoom;
-
-            if (textWidth > segmentLength * 0.8) {
-                gc.restore();
-                return;
-            }
-
-            if (bestAIndex < 0 || bestBIndex < 0)
-                return;
-
-            double ax = graphStorage.getNodeX(bestAIndex);
-            double ay = graphStorage.getNodeY(bestAIndex);
-            double bx = graphStorage.getNodeX(bestBIndex);
-            double by = graphStorage.getNodeY(bestBIndex);
-
-            double x = (ax + bx) / 2;
-            double y = (ay + by) / 2;
-            double dx = bx - ax;
-            double dy = by - ay;
-
-            double angle = Math.toDegrees(Math.atan2(dy, dx));
-
-            if (angle > 90 || angle < -90) {
-                angle += 180;
-
-                flipped = true;
-            }
-            gc.save();
-
-            double screenX = (x + 512 - cameraX) * zoom;
-            double screenY = (y + 512 - cameraY) * zoom;
-
-            gc.translate(
-                    screenX,
-                    screenY);
-
-            gc.rotate(angle);
-            gc.setFont(Font.font("Arial", FontWeight.BOLD, 11));
-
-            gc.fillText(name, 0, 0);
-
-            if ((wayflags & WayFlags.ONEWAY.getValue()) != 0) {
-                double arrowLen = 12;
-                double arrowWing = 4;
-
-                double dir = flipped ? -1 : 1;
-
-                gc.strokeLine(0, 0, dir * arrowLen, 0);
-
-                gc.strokeLine(
-                        dir * arrowLen, 0,
-                        dir * (arrowLen - arrowWing), -arrowWing);
-
-                gc.strokeLine(
-                        dir * arrowLen, 0,
-                        dir * (arrowLen - arrowWing), arrowWing);
-            }
-            gc.restore();
-
         }
+
+        if (bestAIndex < 0 || bestBIndex < 0) {
+            gc.restore();
+            return;
+        }
+        double fontSize = 11;
+        double textWidth = name.length() * (fontSize * 0.55);
+        double segmentLength = Math.sqrt(maxLength) * zoom;
+
+        if (textWidth > segmentLength * 0.8) {
+            gc.restore();
+            return;
+        }
+
+        double ax = graphStorage.getNodeX(bestAIndex);
+        double ay = graphStorage.getNodeY(bestAIndex);
+        double bx = graphStorage.getNodeX(bestBIndex);
+        double by = graphStorage.getNodeY(bestBIndex);
+
+        double x = (ax + bx) / 2;
+        double y = (ay + by) / 2;
+
+        double dx = bx - ax;
+        double dy = by - ay;
+
+        double angle = Math.toDegrees(Math.atan2(dy, dx));
+
+        if (angle > 90 || angle < -90) {
+            angle += 180;
+            flipped = true;
+        }
+
+        double screenX = (x + 512 - cameraX) * zoom;
+        double screenY = (y + 512 - cameraY) * zoom;
+
+        gc.save();
+        gc.translate(screenX, screenY);
+        gc.rotate(angle);
+
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, fontSize));
+
+        gc.fillText(name, -textWidth / 2, 0);
+
+        if ((wayflags & WayFlags.ONEWAY.getValue()) != 0) {
+            double arrowLen = 12;
+            double arrowWing = 4;
+
+            double dir = flipped ? -1 : 1;
+            double gap = 10;
+            double startX = dir * (textWidth / 2 + gap);
+            double startY = 0;
+
+            gc.strokeLine(
+                    startX, startY,
+                    startX + dir * arrowLen, startY);
+
+            gc.strokeLine(
+                    startX + dir * arrowLen, startY,
+                    startX + dir * (arrowLen - arrowWing), startY - arrowWing);
+
+            gc.strokeLine(
+                    startX + dir * arrowLen, startY,
+                    startX + dir * (arrowLen - arrowWing), startY + arrowWing);
+        }
+
+        gc.restore();
+        gc.restore();
     }
 
 }

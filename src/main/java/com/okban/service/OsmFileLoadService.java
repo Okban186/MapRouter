@@ -90,13 +90,13 @@ public class OsmFileLoadService {
 
                                     Way way = (Way) entity;
                                     String name = getTagValue(way, "name");
-                                    if (name != null
-                                            && name.toLowerCase().contains("bến nhà rồng")) {
-                                        for (Tag t : way.getTags())
-                                            System.out.println(t.getKey() + " " + t.getValue());
-                                        System.out.println(way.getWayNodes().size());
+                                    // if (name != null
+                                    // && name.toLowerCase().contains("bến dược")) {
+                                    // for (Tag t : way.getTags())
+                                    // System.out.println(t.getKey() + " " + t.getValue());
+                                    // System.out.println(way.getWayNodes().size());
 
-                                    }
+                                    // }
                                     for (WayNode wn : way.getWayNodes()) {
 
                                         Pair<Integer, Integer> pair = idMatching.get(wn.getNodeId());
