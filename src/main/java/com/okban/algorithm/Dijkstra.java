@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.PriorityQueue;
 
 import com.okban.Enum.WayFlags;
@@ -17,29 +18,58 @@ import com.okban.model.SnapContext;
 
 public class Dijkstra {
 
-  public static DijkstraResult compute(SnapContext start, SnapContext end, GraphStorage graphStorage) {
+  public static List<DijkstraResult> compute(
+      SnapContext start,
+      List<SnapContext> endPoints,
+      GraphStorage graphStorage) {
+
+    int n = graphStorage.getNodeCount();
+
+    // results có sẵn size
+    List<DijkstraResult> results = new ArrayList<>(Collections.nCopies(endPoints.size(), null));
 
     PriorityQueue<Pair<Integer, Double>> open = new PriorityQueue<>(Comparator.comparingDouble(Pair::getValue));
-    int n = graphStorage.getNodeCount();
+
     double[] costs = new double[n];
     int[] parent = new int[n];
     int[] parentEdge = new int[n];
-
-    Arrays.fill(parent, -1);
-    Arrays.fill(costs, -1);
     BitSet close = new BitSet(n);
 
-    if ((start.getWayflags() & WayFlags.ONEWAY.getValue()) == 0) {
-      open.add(new Pair<Integer, Double>(start.getNode1(), 0.0));
-      costs[start.getNode1()] = 0;
+    Arrays.fill(costs, Double.POSITIVE_INFINITY);
+    Arrays.fill(parent, -1);
 
+    if ((start.getWayflags() & WayFlags.ONEWAY.getValue()) == 0) {
+      open.add(new Pair<>(start.getNode1(), 0.0));
+      costs[start.getNode1()] = 0;
     }
 
-    open.add(new Pair<Integer, Double>(start.getNode2(), 0.0));
-
+    open.add(new Pair<>(start.getNode2(), 0.0));
     costs[start.getNode2()] = 0;
 
+    Map<Integer, List<Integer>> targetMap = new HashMap<>();
+    int totalTargets = 0;
+
+    // can lam vay boi 1 diem snap thi co 2 dau cua 1 segment nen co kha nang no bi
+    // trung nhau
+    for (int i = 0; i < endPoints.size(); i++) {
+      SnapContext end = endPoints.get(i);
+
+      if (end == start)
+        continue;
+      totalTargets++;
+      targetMap.computeIfAbsent(end.getNode1(), k -> new ArrayList<>()).add(i);
+
+      if ((end.getWayflags() & WayFlags.ONEWAY.getValue()) == 0) {
+        targetMap.computeIfAbsent(end.getNode2(), k -> new ArrayList<>()).add(i);
+      }
+    }
+
+    int foundCount = 0;
+
     while (!open.isEmpty()) {
+
+      if (foundCount == totalTargets)
+        break;
 
       Pair<Integer, Double> current = open.poll();
       int currentNode = current.key;
@@ -47,78 +77,99 @@ public class Dijkstra {
 
       if (currentCost > costs[currentNode])
         continue;
-
       if (close.get(currentNode))
         continue;
 
-      close.set(currentNode, true);
+      List<Integer> targetIndexes = targetMap.get(currentNode);
 
-      if (currentNode == end.getNode1()) {
-        return buildPath(start, end, end.getNode1(), parent, parentEdge, graphStorage, costs[end.getNode1()]);
+      if (targetIndexes != null) {
+        for (int idx : targetIndexes) {
 
-      }
+          // tránh double count boi vi chung ta su dung dijkstra de quyet toan bo dich de
+          // tranh mot endpoints duoc gap lai nhieu lan
+          if (results.get(idx) != null)
+            continue;
 
-      else if (currentNode == end.getNode2() && (end.getWayflags() & WayFlags.ONEWAY.getValue()) == 0) {
-        return buildPath(start, end, end.getNode2(), parent, parentEdge, graphStorage, costs[end.getNode2()]);
+          SnapContext end = endPoints.get(idx);
 
-      }
+          results.set(idx,
+              buildPath(start, end, currentNode,
+                  parent, parentEdge,
+                  graphStorage, costs[currentNode]));
 
-      for (Integer eIdObj : graphStorage.edgesFromIterable(currentNode)) {
-        int eId = eIdObj;
-        int wayflag = graphStorage.getWayflag(eId);
-        if ((wayflag & WayFlags.FOOTWAY.getValue()) != 0
-            || (wayflag & WayFlags.HISTORIC.getValue()) != 0)
-          continue;
-        int selectedIndex = graphStorage.getEdgeDes(eId);
-        if (close.get(selectedIndex))
-          continue;
-
-        double newCost = currentCost + graphStorage.getEdgeCost(eId);
-        Double oldCost = costs[selectedIndex];
-
-        if (oldCost == -1 || newCost < oldCost) {
-
-          costs[selectedIndex] = newCost;
-
-          parent[selectedIndex] = currentNode;
-          parentEdge[selectedIndex] = eId;
-
-          open.add(new Pair<Integer, Double>(selectedIndex, newCost));
+          foundCount++;
         }
       }
 
-    }
-    return null;
+      close.set(currentNode, true);
 
+      for (Integer eIdObj : graphStorage.edgesFromIterable(currentNode)) {
+
+        int eId = eIdObj;
+        int wayflag = graphStorage.getWayflag(eId);
+
+        if ((wayflag & WayFlags.FOOTWAY.getValue()) != 0
+            || (wayflag & WayFlags.HISTORIC.getValue()) != 0)
+          continue;
+
+        int nextNode = graphStorage.getEdgeDes(eId);
+
+        if (close.get(nextNode))
+          continue;
+
+        double newCost = currentCost + graphStorage.getEdgeCost(eId);
+
+        if (newCost < costs[nextNode]) {
+
+          costs[nextNode] = newCost;
+          parent[nextNode] = currentNode;
+          parentEdge[nextNode] = eId;
+
+          open.add(new Pair<>(nextNode, newCost));
+        }
+      }
+    }
+
+    return results;
   }
 
   private static DijkstraResult buildPath(SnapContext startSnap, SnapContext endSnap, int end, int parent[],
       int parentEdge[],
       GraphStorage graphStorage,
       double cost) {
-    List<Pair<Integer, Integer>> path = new ArrayList<>();
+    List<Integer> listNodeId = new ArrayList<>();
+    List<Integer> listEdgeId = new ArrayList<>();
     int cur = end;
-    while (cur != -1) {
 
-      path.add(new Pair<Integer, Integer>(cur, parentEdge[cur]));
+    while (cur != -1) {
+      listNodeId.add(cur);
+      listEdgeId.add(parentEdge[cur]);
       int next = parent[cur];
       cur = next;
+
     }
 
-    Collections.reverse(path);
+    Collections.reverse(listNodeId);
+    Collections.reverse(listEdgeId);
 
-    if (path.get(0).key == startSnap.getNode1()) {
+    if (listNodeId.get(0) == startSnap.getNode1()) {
       cost += startSnap.getDist1();
-    } else if (path.get(0).key == startSnap.getNode2()) {
+    } else if (listNodeId.get(0) == startSnap.getNode2()) {
       cost += startSnap.getDist2();
     }
 
-    if (path.get(path.size() - 1).key == endSnap.getNode1())
+    if (listNodeId.get(listNodeId.size() - 1) == endSnap.getNode1())
       cost += endSnap.getDist1();
-    else if (path.get(path.size() - 1).key == endSnap.getNode2())
+    else if (listNodeId.get(listNodeId.size() - 1) == endSnap.getNode2())
       cost += endSnap.getDist2();
 
-    return new DijkstraResult(path, startSnap, endSnap, cost);
+    int nodeIds[] = new int[listNodeId.size()];
+    int edgeIds[] = new int[listEdgeId.size()];
+    for (int i = 0; i < listNodeId.size(); i++) {
+      nodeIds[i] = listNodeId.get(i);
+      edgeIds[i] = listEdgeId.get(i);
+    }
+    return new DijkstraResult(nodeIds, edgeIds, startSnap, endSnap, cost);
   }
 
 }

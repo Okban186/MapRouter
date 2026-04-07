@@ -485,7 +485,7 @@ public class MapView {
                                         nearest2, offset1, offset2, len1, len2);
 
                                 snapContexts.add(result);
-                                onPlaceMarker.accept(wLon + " " + wLat);
+                                onPlaceMarker.accept(feature.getName());
                                 return;
                             }
 

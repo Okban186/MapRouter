@@ -1,7 +1,9 @@
 package com.okban.service;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
@@ -21,7 +23,7 @@ import javafx.scene.paint.Color;
 public class RoutingService {
 
     private List<SnapContext> snapContexts;
-    private List<DijkstraResult> routingPaths;
+    private DijkstraResult[][] routingPaths;
     private GraphStorage graphStorage;
     private MapView mapView;
     public double worldWidth = 100_000;
@@ -33,7 +35,6 @@ public class RoutingService {
 
     public RoutingService(List<SnapContext> snapContexts, MapView mapView) {
         this.snapContexts = snapContexts;
-        this.routingPaths = new ArrayList<>();
         this.mapView = mapView;
     }
 
@@ -41,75 +42,117 @@ public class RoutingService {
         this.graphStorage = graphStorage;
     }
 
-    public DijkstraResult getRoutingPath(SnapContext start, SnapContext end) {
-        return Dijkstra.compute(start, end, graphStorage);
+    public List<DijkstraResult> getRoutingPath(SnapContext start, List<SnapContext> endPoints) {
+        return Dijkstra.compute(start, endPoints, graphStorage);
     }
 
     public void reconstructPath() {
-        routingPaths = new ArrayList<>();
-        if (snapContexts.size() <= 1)
+        int n = snapContexts.size();
+        routingPaths = new DijkstraResult[n][n];
+
+        if (n <= 1)
             return;
-        int[] shapeNodes = graphStorage.getShapeNodes();
-        for (int i = 0; i < snapContexts.size(); i++) {
-            for (int j = 0; j < snapContexts.size(); j++) {
+
+        for (int i = 0; i < n; i++) {
+
+            SnapContext snap1 = snapContexts.get(i);
+
+            List<SnapContext> targets = new ArrayList<>();
+            int indexMapping[] = new int[n];
+            Arrays.fill(indexMapping, -1);
+            int index = 0;
+            for (int j = 0; j < n; j++) {
                 if (i == j)
                     continue;
-                SnapContext snap1 = snapContexts.get(i);
+
                 SnapContext snap2 = snapContexts.get(j);
-                if (snap1.getNode1() == snap2.getNode1() && snap1.getNode2() == snap2.getNode2()) {
-                    if (snap1.getNearest1() == snap2.getNearest1() && snap1.getNearest2() == snap2.getNearest2()) {
-                        double xRatio1 = snap1.getX() / worldWidth;
-                        double yRatio1 = snap1.getY() / worldHeight;
 
-                        double wLon1 = xRatio1 * (maxLon - minLon) + minLon;
-                        double wLat1 = (yRatio1 * (maxLat - minLat) - maxLat) * -1;
+                DijkstraResult same = buildSameSegmentPath(snap1, snap2);
 
-                        double xRatio2 = snap2.getX() / worldWidth;
-                        double yRatio2 = snap2.getY() / worldHeight;
+                if (same != null) {
+                    routingPaths[i][j] = same;
+                } else {
+                    targets.add(snap2);
+                    indexMapping[index++] = j;
+                }
+            }
+            index = 0;
 
-                        double wLon2 = xRatio2 * (maxLon - minLon) + minLon;
-                        double wLat2 = (yRatio2 * (maxLat - minLat) - maxLat) * -1;
+            if (!targets.isEmpty()) {
+                List<DijkstraResult> results = getRoutingPath(snap1, targets);
 
-                        double cost = haversineDistance(wLat1, wLon1, wLat2, wLon2);
-
-                        if ((snap1.getWayflags() & WayFlags.ONEWAY.getValue()) == 0
-                                || snap1.getDist1() < snap2.getDist1()) {
-                            routingPaths.add(new DijkstraResult(null, snap1, snap2, cost));
-                        } else if (snap1.getDist1() > snap2.getDist1()) {
-                            routingPaths.add(getRoutingPath(snap1, snap2));
-                        }
-                    } else if (snap1.getDist1() < snap2.getDist1()) {
-
-                        double cost = snap2.getDist1() - snap1.getDist1();
-                        System.out.println(cost);
-                        List<Pair<Integer, Integer>> paths = new ArrayList<>();
-                        for (int index = snap1.getOffset2(); index <= snap2.getOffset1(); index++) {
-                            paths.add(new Pair<Integer, Integer>(shapeNodes[index], null));
-
-                        }
-
-                        routingPaths.add(new DijkstraResult(paths, snap1, snap2, cost));
-
-                    } else {
-                        if ((snap1.getWayflags() & WayFlags.ONEWAY.getValue()) == 0) {
-                            double cost = snap1.getDist1() - snap2.getDist1();
-                            System.out.println(cost);
-                            List<Pair<Integer, Integer>> paths = new ArrayList<>();
-                            for (int index = snap1.getOffset1(); index >= snap2.getOffset2(); index--) {
-                                paths.add(new Pair<Integer, Integer>(shapeNodes[index], null));
-
-                            }
-
-                            routingPaths.add(new DijkstraResult(paths, snap1, snap2, cost));
-                        } else {
-                            routingPaths.add(getRoutingPath(snap1, snap2));
-                        }
-                    }
-                } else
-                    routingPaths.add(getRoutingPath(snap1, snap2));
+                for (DijkstraResult r : results) {
+                    if (r == null)
+                        continue;
+                    int j = indexMapping[index++];
+                    routingPaths[i][j] = r;
+                }
             }
         }
+    }
 
+    public DijkstraResult buildSameSegmentPath(SnapContext snap1, SnapContext snap2) {
+        int[] shapeNodes = graphStorage.getShapeNodes();
+        if (snap1.getNode1() != snap2.getNode1() || snap1.getNode2() != snap2.getNode2()) {
+            return null;
+        }
+        if (snap1.getNearest1() == snap2.getNearest1() &&
+                snap1.getNearest2() == snap2.getNearest2()) {
+
+            double xRatio1 = snap1.getX() / worldWidth;
+            double yRatio1 = snap1.getY() / worldHeight;
+
+            double wLon1 = xRatio1 * (maxLon - minLon) + minLon;
+            double wLat1 = (yRatio1 * (maxLat - minLat) - maxLat) * -1;
+
+            double xRatio2 = snap2.getX() / worldWidth;
+            double yRatio2 = snap2.getY() / worldHeight;
+
+            double wLon2 = xRatio2 * (maxLon - minLon) + minLon;
+            double wLat2 = (yRatio2 * (maxLat - minLat) - maxLat) * -1;
+
+            double cost = haversineDistance(wLat1, wLon1, wLat2, wLon2);
+
+            if ((snap1.getWayflags() & WayFlags.ONEWAY.getValue()) == 0
+                    || snap1.getDist1() <= snap2.getDist1()) {
+
+                return new DijkstraResult(null, null, snap1, snap2, cost);
+            }
+
+            return null;
+        }
+
+        if (snap1.getDist1() < snap2.getDist1()) {
+
+            double cost = snap2.getDist1() - snap1.getDist1();
+
+            int size = snap2.getOffset1() - snap1.getOffset2() + 1;
+            int[] nodeIds = new int[size];
+
+            int i = 0;
+            for (int index = snap1.getOffset2(); index <= snap2.getOffset1(); index++) {
+                nodeIds[i++] = shapeNodes[index];
+            }
+
+            return new DijkstraResult(nodeIds, null, snap1, snap2, cost);
+        }
+
+        if ((snap1.getWayflags() & WayFlags.ONEWAY.getValue()) == 0) {
+
+            double cost = snap1.getDist1() - snap2.getDist1();
+
+            int size = snap1.getOffset1() - snap2.getOffset2() + 1;
+            int[] nodeIds = new int[size];
+
+            int i = 0;
+            for (int index = snap1.getOffset1(); index >= snap2.getOffset2(); index--) {
+                nodeIds[i++] = shapeNodes[index];
+            }
+
+            return new DijkstraResult(nodeIds, null, snap1, snap2, cost);
+        }
+
+        return null;
     }
 
     public static double haversineDistance(double lat1, double lon1, double lat2, double lon2) {
@@ -132,7 +175,7 @@ public class RoutingService {
 
     public RoutingFeature GTS() {
         reconstructPath();
-        if (routingPaths == null || routingPaths.size() <= 0)
+        if (routingPaths == null || routingPaths.length <= 0)
             return null;
         int n = snapContexts.size();
 
@@ -155,7 +198,7 @@ public class RoutingService {
                 if (cur == j || visit.get(j))
                     continue;
 
-                double cost = getCost(cur, j, n);
+                double cost = getCost(cur, j);
                 if (cost < minCost) {
                     next = j;
                     minCost = cost;
@@ -180,8 +223,9 @@ public class RoutingService {
             int a = route.get(i);
             int b = route.get(i + 1);
 
-            int index = a * (n - 1) + (b < a ? b : b - 1);
-            DijkstraResult r = routingPaths.get(index);
+            // int index = a * (n - 1) + (b < a ? b : b - 1);
+            // int index = a * n + b;
+            DijkstraResult r = routingPaths[a][b];
 
             if (r != null) {
                 paths.add(r);
@@ -208,22 +252,23 @@ public class RoutingService {
             maxX = Math.max(maxX, snap2.getX());
             maxY = Math.max(maxY, snap2.getY());
 
-            List<Pair<Integer, Integer>> dPairs = dResult.path;
-            if (dPairs == null)
+            int nodeIds[] = dResult.nodeIds;
+            int edgeIds[] = dResult.edgeIds;
+            if (nodeIds == null && edgeIds == null)
                 continue;
 
-            for (int index = 0; index < dPairs.size(); index++) {
-                Integer edgeId = dPairs.get(index).getValue();
-                if (edgeId == null) {
-                    double x = graphStorage.getNodeX(dPairs.get(index).getKey());
-                    double y = graphStorage.getNodeY(dPairs.get(index).getKey());
+            for (int index = 0; index < nodeIds.length; index++) {
+
+                if (edgeIds == null) {
+                    double x = graphStorage.getNodeX(nodeIds[index]);
+                    double y = graphStorage.getNodeY(nodeIds[index]);
 
                     minX = Math.min(minX, x);
                     minY = Math.min(minY, y);
                     maxX = Math.max(maxX, x);
                     maxY = Math.max(maxY, y);
                 } else {
-                    int[] shapeNodeIds = graphStorage.getShapeNodeIds(edgeId);
+                    int[] shapeNodeIds = graphStorage.getShapeNodeIds(edgeIds[index]);
 
                     if (shapeNodeIds.length == 0)
                         continue;
@@ -265,14 +310,15 @@ public class RoutingService {
 
     }
 
-    private double getCost(int a, int b, int n) {
-        int index = a * (n - 1) + (b < a ? b : b - 1);
-        DijkstraResult r = routingPaths.get(index);
+    private double getCost(int a, int b) {
+        // int index = a * (n - 1) + (b < a ? b : b - 1);
+        // int index = a * n + b;
+        DijkstraResult r = routingPaths[a][b];
         return (r == null) ? Double.MAX_VALUE : r.cost;
     }
 
     private void twoOptSA(List<Integer> route, int n) {
-        double T = 1000; // nhiệt độ ban đầu
+        double T = 3000; // nhiệt độ ban đầu
         double cooling = 0.995; // tốc độ giảm nhiệt
         double T_min = 1e-3;
 
@@ -286,14 +332,14 @@ public class RoutingService {
 
                     double oldCost = 0;
                     for (int k = 0; k < route.size() - 1; k++) {
-                        oldCost += getCost(route.get(k), route.get(k + 1), n);
+                        oldCost += getCost(route.get(k), route.get(k + 1));
                     }
 
                     reverse(route, i, j);
 
                     double newCost = 0;
                     for (int k = 0; k < route.size() - 1; k++) {
-                        newCost += getCost(route.get(k), route.get(k + 1), n);
+                        newCost += getCost(route.get(k), route.get(k + 1));
                     }
 
                     double delta = newCost - oldCost;

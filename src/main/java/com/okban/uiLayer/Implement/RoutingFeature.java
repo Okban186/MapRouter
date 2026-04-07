@@ -123,13 +123,14 @@ public class RoutingFeature {
 
             lastX = x1;
             lastY = y1;
-            List<Pair<Integer, Integer>> dPairs = dResult.path;
-            if (dPairs != null) {
+            int nodeIds[] = dResult.nodeIds;
+            int edgeIds[] = dResult.edgeIds;
+            if (nodeIds != null && edgeIds != null) {
                 if (snap1.getNode1() == snap2.getNode1() && snap1.getNode2() == snap2.getNode2()
                         && (snap1.getWayflags() & WayFlags.ONEWAY.getValue()) == 0) {
-                    for (int i = 0; i < dPairs.size(); i++) {
-                        double x = (graphStorage.getNodeX(dPairs.get(i).getKey()) + 512 - cameraX) * zoom;
-                        double y = (graphStorage.getNodeY(dPairs.get(i).getKey()) + 512 - cameraY) * zoom;
+                    for (int i = 0; i < nodeIds.length; i++) {
+                        double x = (graphStorage.getNodeX(nodeIds[i]) + 512 - cameraX) * zoom;
+                        double y = (graphStorage.getNodeY(nodeIds[i]) + 512 - cameraY) * zoom;
 
                         double dx = x - lastX;
                         double dy = y - lastY;
@@ -145,7 +146,7 @@ public class RoutingFeature {
                     }
                 } else {
 
-                    int node1 = dPairs.getFirst().key;
+                    int node1 = nodeIds[0];
 
                     if (node1 == snap1.getNode1()) {
                         if (node1 != snap1.getNearest1()) {
@@ -185,17 +186,17 @@ public class RoutingFeature {
                         }
                     }
 
-                    for (int index = 1; index < dPairs.size(); index++) {
-                        Integer edgeId = dPairs.get(index).getValue();
-                        if (edgeId == null)
+                    for (int index = 1; index < nodeIds.length; index++) {
+
+                        if (edgeIds == null)
                             continue;
-                        int[] shapeNodeIds = graphStorage.getShapeNodeIds(edgeId);
+                        int[] shapeNodeIds = graphStorage.getShapeNodeIds(edgeIds[index]);
 
                         if (shapeNodeIds.length == 0)
                             continue;
 
-                        boolean reverse = graphStorage.isReverse(edgeId);
-                        boolean isOneWay = (graphStorage.getWayflag(edgeId) & WayFlags.ONEWAY.getValue()) != 0;
+                        boolean reverse = graphStorage.isReverse(edgeIds[index]);
+                        boolean isOneWay = (graphStorage.getWayflag(edgeIds[index]) & WayFlags.ONEWAY.getValue()) != 0;
 
                         int startIdx = reverse ? shapeNodeIds.length - 1 : 0;
                         int endIdx = reverse ? -1 : shapeNodeIds.length;
@@ -224,7 +225,7 @@ public class RoutingFeature {
                         }
                     }
 
-                    int node2 = dPairs.getLast().key;
+                    int node2 = nodeIds[nodeIds.length - 1];
 
                     if (node2 == snap2.getNode1()) {
                         if (node2 != snap2.getNearest1()) {
@@ -272,7 +273,7 @@ public class RoutingFeature {
             gc.fillOval(x2, y2, 4, 4);
             gc.restore();
             gc.save();
-            gc.setFill(Color.RED); // màu khác
+            gc.setFill(Color.RED);
             gc.setFont(Font.font("Arial", FontWeight.BOLD, 12));
             gc.fillText(String.valueOf(number++), x2 + 20, y2 - 4);
 
