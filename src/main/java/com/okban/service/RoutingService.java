@@ -3,18 +3,21 @@ package com.okban.service;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
 import com.okban.Enum.WayFlags;
 import com.okban.algorithm.Dijkstra;
+import com.okban.config.MapConfig;
 import com.okban.dto.DijkstraResult;
 import com.okban.dto.Pair;
 
 import com.okban.model.GraphStorage;
 import com.okban.model.SnapContext;
 import com.okban.uiLayer.MapView;
+import com.okban.uiLayer.Implement.RoadFeature;
 import com.okban.uiLayer.Implement.RoutingFeature;
 
 import javafx.geometry.BoundingBox;
@@ -25,17 +28,13 @@ public class RoutingService {
     private List<SnapContext> snapContexts;
     private DijkstraResult[][] routingPaths;
     private GraphStorage graphStorage;
-    private MapView mapView;
-    public double worldWidth = 100_000;
-    public double worldHeight = 100_000;
-    private double minLon = 106.30;
-    private double maxLon = 107.10;
-    private double minLat = 10.30;
-    private double maxLat = 11.20;
+    private MapConfig mapConfig;
+    private List<RoutingFeature> routingCache;
 
-    public RoutingService(List<SnapContext> snapContexts, MapView mapView) {
+    public RoutingService(List<SnapContext> snapContexts, MapConfig mapConfig) {
         this.snapContexts = snapContexts;
-        this.mapView = mapView;
+        this.mapConfig = mapConfig;
+        routingCache = new ArrayList<>(Collections.nCopies(3, null));
     }
 
     public void setGraphStorage(GraphStorage graphStorage) {
@@ -47,7 +46,9 @@ public class RoutingService {
     }
 
     public void reconstructPath() {
+
         int n = snapContexts.size();
+
         routingPaths = new DijkstraResult[n][n];
 
         if (n <= 1)
@@ -99,17 +100,17 @@ public class RoutingService {
         if (snap1.getNearest1() == snap2.getNearest1() &&
                 snap1.getNearest2() == snap2.getNearest2()) {
 
-            double xRatio1 = snap1.getX() / worldWidth;
-            double yRatio1 = snap1.getY() / worldHeight;
+            double xRatio1 = snap1.getX() / mapConfig.worldWidth;
+            double yRatio1 = snap1.getY() / mapConfig.worldHeight;
 
-            double wLon1 = xRatio1 * (maxLon - minLon) + minLon;
-            double wLat1 = (yRatio1 * (maxLat - minLat) - maxLat) * -1;
+            double wLon1 = xRatio1 * (mapConfig.maxLon - mapConfig.minLon) + mapConfig.minLon;
+            double wLat1 = (yRatio1 * (mapConfig.maxLat - mapConfig.minLat) - mapConfig.maxLat) * -1;
 
-            double xRatio2 = snap2.getX() / worldWidth;
-            double yRatio2 = snap2.getY() / worldHeight;
+            double xRatio2 = snap2.getX() / mapConfig.worldWidth;
+            double yRatio2 = snap2.getY() / mapConfig.worldHeight;
 
-            double wLon2 = xRatio2 * (maxLon - minLon) + minLon;
-            double wLat2 = (yRatio2 * (maxLat - minLat) - maxLat) * -1;
+            double wLon2 = xRatio2 * (mapConfig.maxLon - mapConfig.minLon) + mapConfig.minLon;
+            double wLat2 = (yRatio2 * (mapConfig.maxLat - mapConfig.minLat) - mapConfig.maxLat) * -1;
 
             double cost = haversineDistance(wLat1, wLon1, wLat2, wLon2);
 
@@ -174,6 +175,27 @@ public class RoutingService {
     }
 
     public RoutingFeature GTS() {
+        if (MapConfig.snapcontextsChanged) {
+            routingCache.set(0, null);
+            routingCache.set(1, null);
+            routingCache.set(2, null);
+            MapConfig.snapcontextsChanged = false;
+        } else {
+            switch (MapConfig.currentVehicleType) {
+                case CAR:
+                    if (routingCache.get(0) != null)
+                        return routingCache.get(0);
+                    break;
+                case MOTORCYCLE:
+                    if (routingCache.get(1) != null)
+                        return routingCache.get(1);
+                    break;
+                default:
+                    if (routingCache.get(2) != null)
+                        return routingCache.get(2);
+                    break;
+            }
+        }
         reconstructPath();
         if (routingPaths == null || routingPaths.length <= 0)
             return null;
@@ -287,19 +309,19 @@ public class RoutingService {
         }
         BoundingBox boundingBox = new BoundingBox(minX, minY, maxX - minX, maxY - minY);
 
-        int minTileX = (int) (minX / mapView.TILE_WIDTH);
-        int maxTileX = (int) (maxX / mapView.TILE_WIDTH);
-        int minTileY = (int) (minY / mapView.TILE_HEIGHT);
-        int maxTileY = (int) (maxY / mapView.TILE_HEIGHT);
+        int minTileX = (int) (minX / mapConfig.TILE_WIDTH);
+        int maxTileX = (int) (maxX / mapConfig.TILE_WIDTH);
+        int minTileY = (int) (minY / mapConfig.TILE_HEIGHT);
+        int maxTileY = (int) (maxY / mapConfig.TILE_HEIGHT);
 
-        int tileCell = (int) (mapView.worldWidth / mapView.TILE_WIDTH);
+        int tileCell = (int) (mapConfig.worldWidth / mapConfig.TILE_WIDTH);
 
         minTileX = Math.max(0, minTileX);
         minTileY = Math.max(0, minTileY);
         maxTileX = Math.min(tileCell - 1, maxTileX);
         maxTileY = Math.min(tileCell - 1, maxTileY);
 
-        return new RoutingFeature(
+        RoutingFeature routingFeature = new RoutingFeature(
                 0, Color.BLUE, 3,
                 graphStorage,
                 paths,
@@ -307,6 +329,19 @@ public class RoutingService {
                 maxTileX, minTileX,
                 maxTileY, minTileY,
                 total);
+        switch (MapConfig.currentVehicleType) {
+            case CAR:
+                routingCache.add(0, routingFeature);
+                break;
+            case MOTORCYCLE:
+                routingCache.add(1, routingFeature);
+                break;
+            default:
+                routingCache.add(2, routingFeature);
+                break;
+
+        }
+        return routingFeature;
 
     }
 
