@@ -6,6 +6,7 @@ import org.openstreetmap.osmosis.core.domain.v0_6.Tag;
 
 import com.okban.Enum.HighwayType;
 import com.okban.Enum.WayFlags;
+import com.okban.config.MapConfig;
 import com.okban.model.GraphStorage;
 
 import javafx.geometry.BoundingBox;
@@ -91,9 +92,9 @@ public abstract class MapFeature {
     }
 
     public abstract void draw(GraphicsContext gc, double cameraX, double cameraY, double zoom,
-            GraphStorage graphStorage);
+            GraphStorage graphStorage, MapConfig mapConfig);
 
     public abstract void drawLabel(GraphicsContext gc, double cameraX, double cameraY, double zoom,
-            GraphStorage graphStorage);
+            GraphStorage graphStorage, MapConfig mapConfig);
 
 }

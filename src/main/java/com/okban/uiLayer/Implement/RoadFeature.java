@@ -1,11 +1,8 @@
 package com.okban.uiLayer.Implement;
 
-import java.util.Collection;
-
-import org.openstreetmap.osmosis.core.domain.v0_6.Tag;
-
 import com.okban.Enum.HighwayType;
 import com.okban.Enum.WayFlags;
+import com.okban.config.MapConfig;
 import com.okban.model.GraphStorage;
 import com.okban.uiLayer.Abstract.MapFeature;
 
@@ -14,7 +11,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
-import javafx.scene.text.Text;
 
 public class RoadFeature extends MapFeature {
 
@@ -34,7 +30,8 @@ public class RoadFeature extends MapFeature {
     }
 
     @Override
-    public void draw(GraphicsContext gc, double cameraX, double cameraY, double zoom, GraphStorage graphStorage) {
+    public void draw(GraphicsContext gc, double cameraX, double cameraY, double zoom, GraphStorage graphStorage,
+            MapConfig mapConfig) {
         if (segmentLen < 2)
             return;
         boolean firstPoint = true;
@@ -49,8 +46,8 @@ public class RoadFeature extends MapFeature {
         int shapeNodes[] = graphStorage.getShapeNodes();
         for (int i = segmentOffset; i < segmentLen + segmentOffset; i++) {
 
-            double screenX = (graphStorage.getNodeX(shapeNodes[i]) + 512 - cameraX) * zoom;
-            double screenY = (graphStorage.getNodeY(shapeNodes[i]) + 512 - cameraY) * zoom;
+            double screenX = (graphStorage.getNodeX(shapeNodes[i]) + mapConfig.BUFFER / 2 - cameraX) * zoom;
+            double screenY = (graphStorage.getNodeY(shapeNodes[i]) + mapConfig.BUFFER / 2 - cameraY) * zoom;
 
             double dx = screenX - lastX;
             double dy = screenY - lastY;
@@ -75,7 +72,8 @@ public class RoadFeature extends MapFeature {
     }
 
     @Override
-    public void drawLabel(GraphicsContext gc, double cameraX, double cameraY, double zoom, GraphStorage graphStorage) {
+    public void drawLabel(GraphicsContext gc, double cameraX, double cameraY, double zoom, GraphStorage graphStorage,
+            MapConfig mapConfig) {
 
         if (name == null || zoom <= 1.5)
             return;
@@ -140,8 +138,8 @@ public class RoadFeature extends MapFeature {
             flipped = true;
         }
 
-        double screenX = (x + 512 - cameraX) * zoom;
-        double screenY = (y + 512 - cameraY) * zoom;
+        double screenX = (x + mapConfig.BUFFER / 2 - cameraX) * zoom;
+        double screenY = (y + mapConfig.BUFFER / 2 - cameraY) * zoom;
 
         gc.save();
         gc.translate(screenX, screenY);

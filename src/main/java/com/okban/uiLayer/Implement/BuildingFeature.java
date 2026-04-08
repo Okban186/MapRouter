@@ -1,11 +1,7 @@
 package com.okban.uiLayer.Implement;
 
-import java.util.Collection;
-
-import org.openstreetmap.osmosis.core.domain.v0_6.Tag;
-
-import com.okban.Enum.HighwayType;
 import com.okban.Enum.WayFlags;
+import com.okban.config.MapConfig;
 import com.okban.model.GraphStorage;
 import com.okban.uiLayer.Abstract.MapFeature;
 
@@ -13,7 +9,6 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.text.Font;
-import javafx.scene.text.Text;
 
 public class BuildingFeature extends MapFeature {
 
@@ -28,7 +23,8 @@ public class BuildingFeature extends MapFeature {
     }
 
     @Override
-    public void draw(GraphicsContext gc, double cameraX, double cameraY, double zoom, GraphStorage graphStorage) {
+    public void draw(GraphicsContext gc, double cameraX, double cameraY, double zoom, GraphStorage graphStorage,
+            MapConfig mapConfig) {
         boolean firstPoint = true;
         double lastX = 0;
         double lastY = 0;
@@ -81,9 +77,10 @@ public class BuildingFeature extends MapFeature {
     }
 
     @Override
-    public void drawLabel(GraphicsContext gc, double cameraX, double cameraY, double zoom, GraphStorage graphStorage) {
+    public void drawLabel(GraphicsContext gc, double cameraX, double cameraY, double zoom, GraphStorage graphStorage,
+            MapConfig mapConfig) {
 
-        if (name != null && zoom > 2) {
+        if (name != null && zoom > 1.5) {
             gc.save();
 
             gc.setFont(Font.font(9));
