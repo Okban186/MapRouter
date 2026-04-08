@@ -15,11 +15,12 @@ import org.openstreetmap.osmosis.core.task.v0_6.Sink;
 import com.okban.Enum.FeatureType;
 import com.okban.Enum.HighwayType;
 import com.okban.Enum.WayFlags;
+import com.okban.config.MapConfig;
 import com.okban.dto.OsmDataResult;
 import com.okban.dto.Pair;
 import com.okban.model.GraphStorage;
 import com.okban.model.POI;
-import com.okban.uiLayer.MapView;
+
 import com.okban.uiLayer.Abstract.MapFeature;
 import com.okban.uiLayer.Implement.BuildingFeature;
 
@@ -36,20 +37,15 @@ public class OsmFileLoadService {
         graphStorage = new GraphStorage();
     }
 
-    public Task<OsmDataResult> processPbfFile(Path path, MapView mapView) {
+    public Task<OsmDataResult> processPbfFile(Path path, MapConfig mapConfig) {
 
         Task<OsmDataResult> loadTask = new Task<>() {
-
-            private double minLon = 106.30;
-            private double maxLon = 107.10;
-            private double minLat = 10.30;
-            private double maxLat = 11.20;
 
             private HashMap<Long, Pair<Integer, Integer>> idMatching = new HashMap<>();
 
             // không cấp phát mảng 2D lớn ngay — dùng map sparse tạm thời
-            private int tileCellX = (int) Math.max(1, Math.ceil(mapView.worldWidth / mapView.TILE_WIDTH));
-            private int tileCellY = (int) Math.max(1, Math.ceil(mapView.worldHeight / mapView.TILE_HEIGHT));
+            private int tileCellX = (int) Math.max(1, Math.ceil(mapConfig.worldWidth / mapConfig.TILE_WIDTH));
+            private int tileCellY = (int) Math.max(1, Math.ceil(mapConfig.worldHeight / mapConfig.TILE_HEIGHT));
             private Map<Long, List<MapFeature>> sparseTileIndex = new HashMap<>();
 
             private int maxTileXUsed = -1;
@@ -75,11 +71,13 @@ public class OsmFileLoadService {
 
                                     Node node = (Node) entity;
 
-                                    double xRatio = (node.getLongitude() - minLon) / (maxLon - minLon);
-                                    double yRatio = (maxLat - node.getLatitude()) / (maxLat - minLat);
+                                    double xRatio = (node.getLongitude() - mapConfig.minLon)
+                                            / (mapConfig.maxLon - mapConfig.minLon);
+                                    double yRatio = (mapConfig.maxLat - node.getLatitude())
+                                            / (mapConfig.maxLat - mapConfig.minLat);
 
-                                    double worldX = xRatio * mapView.worldWidth;
-                                    double worldY = yRatio * mapView.worldHeight;
+                                    double worldX = xRatio * mapConfig.worldWidth;
+                                    double worldY = yRatio * mapConfig.worldHeight;
 
                                     graphStorage.addNode(worldX, worldY, node.getLongitude(), node.getLatitude());
                                     idMatching.put(node.getId(), new Pair<>(graphStorage.getNodeCount() - 1, 0));
@@ -89,13 +87,15 @@ public class OsmFileLoadService {
                                 if (entity.getType() == EntityType.Way) {
 
                                     Way way = (Way) entity;
-                                    String name = getTagValue(way, "name");
-                                    // if (name != null
-                                    // && name.toLowerCase().contains("bến dược")) {
-                                    // for (Tag t : way.getTags())
-                                    // System.out.println(t.getKey() + " " + t.getValue());
-                                    // System.out.println(way.getWayNodes().size());
+                                    // String name = getTagValue(way, "name");
 
+                                    // if (name != null
+                                    // && name.toLowerCase().contains("xa lộ hà nội")) {
+                                    // System.out.println();
+                                    // for (Tag t : way.getTags()) {
+                                    // System.out.println(t.getKey() + " " + t.getValue());
+
+                                    // }
                                     // }
                                     for (WayNode wn : way.getWayNodes()) {
 
@@ -133,11 +133,14 @@ public class OsmFileLoadService {
 
                     reader1.run();
 
-                } catch (Exception e) {
+                } catch (
+
+                Exception e) {
                     e.printStackTrace();
                 }
 
-                try (InputStream fips = Files.newInputStream(path)) {
+                try (
+                        InputStream fips = Files.newInputStream(path)) {
                     OsmosisReader reader2 = new OsmosisReader(fips);
                     reader2.setSink(new Sink() {
 
@@ -252,7 +255,7 @@ public class OsmFileLoadService {
 
                                         if (feature != null) {
 
-                                            insertIntoTiles(feature, mapView);
+                                            insertIntoTiles(feature, mapConfig);
                                         }
 
                                     }
@@ -341,33 +344,65 @@ public class OsmFileLoadService {
 
             private HighwayType getHighwayType(String highway) {
                 switch (highway) {
-                    case "motorway":
-                        return HighwayType.MOTORWAY;
-                    case "trunk":
-                        return HighwayType.TRUNK;
-                    case "primary":
-                        return HighwayType.PRIMARY;
-                    case "secondary":
-                        return HighwayType.SECONDARY;
-                    case "tertiary":
-                        return HighwayType.TERTIARY;
-                    case "residential":
-                        return HighwayType.RESIDENTIAL;
                     case "footway":
                         return HighwayType.FOOTWAY;
+                    case "motorway":
+                        return HighwayType.MOTORWAY;
+                    case "motorway_link":
+                        return HighwayType.MOTORWAY_LINK;
+
+                    case "trunk":
+                        return HighwayType.TRUNK;
+                    case "trunk_link":
+                        return HighwayType.TRUNK_LINK;
+
+                    case "primary":
+                        return HighwayType.PRIMARY;
+                    case "primary_link":
+                        return HighwayType.PRIMARY_LINK;
+
+                    case "secondary":
+                        return HighwayType.SECONDARY;
+                    case "secondary_link":
+                        return HighwayType.SECONDARY_LINK;
+
+                    case "tertiary":
+                        return HighwayType.TERTIARY;
+                    case "tertiary_link":
+                        return HighwayType.TERTIARY_LINK;
+
+                    case "residential":
+                        return HighwayType.RESIDENTIAL;
+                    case "service":
+                        return HighwayType.SERVICE;
+                    case "unclassified":
+                        return HighwayType.UNCLASSIFIED;
+
+                    case "living_street":
+                        return HighwayType.LIVING_STREET;
+
+                    case "track":
+                        return HighwayType.TRACK;
+
+                    case "path":
+                        return HighwayType.PATH;
+
+                    case "cycleway":
+                        return HighwayType.CYCLEWAY;
+
                     default:
-                        return HighwayType.UNSET;
+                        return HighwayType.UNKNOWN;
                 }
             }
 
-            private void insertIntoTiles(MapFeature feature, MapView mapView) {
+            private void insertIntoTiles(MapFeature feature, MapConfig MapConfig) {
 
                 var box = feature.getBoundingBox();
 
-                int minTileX = (int) (box.getMinX() / mapView.TILE_WIDTH);
-                int maxTileX = (int) (box.getMaxX() / mapView.TILE_WIDTH);
-                int minTileY = (int) (box.getMinY() / mapView.TILE_HEIGHT);
-                int maxTileY = (int) (box.getMaxY() / mapView.TILE_HEIGHT);
+                int minTileX = (int) (box.getMinX() / MapConfig.TILE_WIDTH);
+                int maxTileX = (int) (box.getMaxX() / MapConfig.TILE_WIDTH);
+                int minTileY = (int) (box.getMinY() / MapConfig.TILE_HEIGHT);
+                int maxTileY = (int) (box.getMaxY() / MapConfig.TILE_HEIGHT);
 
                 minTileX = Math.max(0, minTileX);
                 minTileY = Math.max(0, minTileY);
@@ -484,26 +519,90 @@ public class OsmFileLoadService {
     public int wayflagsBuild(Way way) {
         int wayflags = 0;
         for (Tag tag : way.getTags()) {
-            // if (tag.getKey().contains("maxspeed"))
-            // System.out.println(way.getId() + " " + tag.getKey() + " " + tag.getValue());
-            switch (tag.getKey()) {
+            String k = tag.getKey();
+            String v = tag.getValue();
+            switch (k) {
 
                 case "highway":
                     wayflags |= WayFlags.HIGHWAY.getValue();
-                    if (tag.getValue().equals("footway") || tag.getValue().equals("steps"))
-                        wayflags |= WayFlags.FOOTWAY.getValue();
-                    break;
-                case "oneway":
-                    if (tag.getValue().equals("yes"))
-                        wayflags |= WayFlags.ONEWAY.getValue();
-                    break;
-                case "building":
 
+                    if (v.equals("footway") || v.equals("steps") || v.equals("path") || v.equals("pedestrian")) {
+                        wayflags |= WayFlags.FOOTWAY.getValue();
+                    }
+
+                    if (v.equals("service")) {
+                        wayflags |= WayFlags.SERVICE.getValue();
+                    }
+                    break;
+
+                case "oneway":
+                    if (v.equals("yes") || v.equals("1") || v.equals("true")) {
+                        wayflags |= WayFlags.ONEWAY.getValue();
+                    }
+                    break;
+                case "psv":
+                    if (v.equals("no")) {
+                        wayflags |= WayFlags.PSV_NO.getValue();
+                    }
+                    break;
+                case "access":
+                    if (v.equals("no")) {
+                        wayflags |= WayFlags.ACCESS_NO.getValue();
+                    } else if (v.equals("private")) {
+                        wayflags |= WayFlags.PRIVATE.getValue();
+                    } else if (v.equals("destination")) {
+                        wayflags |= WayFlags.DESTINATION.getValue();
+                    }
+                    break;
+                case "fee":
+                    if (v.equals("yes")) {
+                        wayflags |= WayFlags.FEE.getValue();
+                    }
+                    break;
+                case "vehicle":
+                    if (v.equals("no")) {
+                        wayflags |= WayFlags.VEHICLE_NO.getValue();
+                    }
+                    break;
+
+                case "motor_vehicle":
+                    if (v.equals("no")) {
+                        wayflags |= WayFlags.VEHICLE_NO.getValue();
+                    }
+                    break;
+
+                case "motorcar":
+                    if (v.equals("no")) {
+                        wayflags |= WayFlags.MOTORCAR_NO.getValue();
+                    } else if (v.equals("destination")) {
+                        wayflags |= WayFlags.DESTINATION.getValue();
+                    }
+                    break;
+
+                case "motorcycle":
+                    if (v.equals("no")) {
+                        wayflags |= WayFlags.MOTORCYCLE_NO.getValue();
+                    }
+                    break;
+
+                case "bicycle":
+                    if (v.equals("no")) {
+                        wayflags |= WayFlags.BICYCLE_NO.getValue();
+                    }
+                    break;
+
+                case "foot":
+                    if (v.equals("no")) {
+                        wayflags |= WayFlags.FOOT_NO.getValue();
+                    }
+                    break;
+
+                // ===== OTHER =====
+                case "building":
                     wayflags |= WayFlags.BUILDING.getValue();
                     break;
 
                 case "historic":
-
                     wayflags |= WayFlags.HISTORIC.getValue();
                     break;
 

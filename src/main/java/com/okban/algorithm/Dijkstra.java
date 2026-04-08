@@ -10,11 +10,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 
+import com.okban.Enum.VehicleType;
 import com.okban.Enum.WayFlags;
+import com.okban.config.MapConfig;
 import com.okban.dto.DijkstraResult;
 import com.okban.dto.Pair;
 import com.okban.model.GraphStorage;
 import com.okban.model.SnapContext;
+
+import javafx.print.Printer.MarginType;
 
 public class Dijkstra {
 
@@ -108,8 +112,7 @@ public class Dijkstra {
         int eId = eIdObj;
         int wayflag = graphStorage.getWayflag(eId);
 
-        if ((wayflag & WayFlags.FOOTWAY.getValue()) != 0
-            || (wayflag & WayFlags.HISTORIC.getValue()) != 0)
+        if (shouldSkip(wayflag, MapConfig.currentVehicleType))
           continue;
 
         int nextNode = graphStorage.getEdgeDes(eId);
@@ -172,4 +175,32 @@ public class Dijkstra {
     return new DijkstraResult(nodeIds, edgeIds, startSnap, endSnap, cost);
   }
 
+  private static boolean shouldSkip(int wayflags, VehicleType vehicle) {
+    switch (vehicle) {
+      case CAR:
+        return (wayflags & WayFlags.BUILDING.getValue()) != 0
+            || (wayflags & WayFlags.FOOTWAY.getValue()) != 0
+            || (wayflags & WayFlags.ACCESS_NO.getValue()) != 0
+            || (wayflags & WayFlags.VEHICLE_NO.getValue()) != 0
+            || (wayflags & WayFlags.PRIVATE.getValue()) != 0
+            || (wayflags & WayFlags.MOTORCAR_NO.getValue()) != 0
+            || (wayflags & WayFlags.FEE.getValue()) != 0; // ví dụ không đi đường thu phí
+      case MOTORCYCLE:
+        return (wayflags & WayFlags.BUILDING.getValue()) != 0
+            || (wayflags & WayFlags.FOOTWAY.getValue()) != 0
+            || (wayflags & WayFlags.ACCESS_NO.getValue()) != 0
+            || (wayflags & WayFlags.PRIVATE.getValue()) != 0
+            || (wayflags & WayFlags.MOTORCYCLE_NO.getValue()) != 0;
+      case PSV: // PSV
+        return (wayflags & WayFlags.BUILDING.getValue()) != 0
+            || (wayflags & WayFlags.FOOTWAY.getValue()) != 0
+            || (wayflags & WayFlags.ACCESS_NO.getValue()) != 0
+            || (wayflags & WayFlags.VEHICLE_NO.getValue()) != 0
+            || (wayflags & WayFlags.PRIVATE.getValue()) != 0
+            || (wayflags & WayFlags.PSV_NO.getValue()) != 0
+            || (wayflags & WayFlags.FEE.getValue()) != 0;
+      default:
+        return true; // an toàn
+    }
+  }
 }

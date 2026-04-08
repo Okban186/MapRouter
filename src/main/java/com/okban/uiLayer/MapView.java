@@ -3,7 +3,9 @@ package com.okban.uiLayer;
 import java.util.List;
 import java.util.function.Consumer;
 
+import com.okban.Enum.VehicleType;
 import com.okban.Enum.WayFlags;
+import com.okban.config.MapConfig;
 import com.okban.dto.OsmDataResult;
 
 import com.okban.model.GraphStorage;
@@ -34,10 +36,10 @@ public class MapView {
     private Canvas lineOverlay;
     private double ROOT_WIDTH;
     private double ROOT_HEIGHT;
-    public double TILE_WIDTH = 256;
-    public double TILE_HEIGHT = 256;
-    public double worldWidth = 100_000;
-    public double worldHeight = 100_000;
+    // public double TILE_WIDTH = 256;
+    // public double TILE_HEIGHT = 256;
+    // public double worldWidth = 100_000;
+    // public double worldHeight = 100_000;
     private double cameraX = 0;
     private double cameraY = 0;
     private int zoomLevel = 1;
@@ -50,12 +52,12 @@ public class MapView {
     private boolean routingLine;
     private RoutingFeature routingFeature;
     private static final int MAX_FRAME_ID = 1000000;
-    private double BUFFER = 512 * 2;
+    // private double BUFFER = 512 * 2;
     private boolean isDragg = false;
-    private double minLon = 106.30;
-    private double maxLon = 107.10;
-    private double minLat = 10.30;
-    private double maxLat = 11.20;
+    // private double minLon = 106.30;
+    // private double maxLon = 107.10;
+    // private double minLat = 10.30;
+    // private double maxLat = 11.20;
     private double dragAccumX = 0;
     private double dragAccumY = 0;
     private List<SnapContext> snapContexts;
@@ -65,11 +67,13 @@ public class MapView {
     private OsmDataResult dataWrapper;
 
     private Consumer<String> onPlaceMarker;
+    private MapConfig mapConfig;
 
-    public MapView(double ROOT_WIDTH, double ROOT_HEIGHT) {
+    public MapView(double ROOT_WIDTH, double ROOT_HEIGHT, MapConfig mapConfig) {
         this.ROOT_WIDTH = ROOT_WIDTH;
         this.ROOT_HEIGHT = ROOT_HEIGHT;
-        tileCell = (int) (worldWidth / TILE_WIDTH);
+        this.mapConfig = mapConfig;
+        tileCell = (int) (mapConfig.worldWidth / mapConfig.TILE_WIDTH);
 
         updateZoom();
     }
@@ -88,17 +92,17 @@ public class MapView {
         map.setPrefSize(ROOT_WIDTH, ROOT_HEIGHT);
         map.setBackground(new Background(new BackgroundFill(Color.LIGHTGREY, null, null)));
         overlay = new Pane();
-        double canvasWidth = ROOT_WIDTH + BUFFER;
-        double canvasHeight = ROOT_HEIGHT + BUFFER;
+        double canvasWidth = ROOT_WIDTH + mapConfig.BUFFER;
+        double canvasHeight = ROOT_HEIGHT + mapConfig.BUFFER;
 
         lineConnect = new Canvas(canvasWidth, canvasHeight);
         lineOverlay = new Canvas(canvasWidth, canvasHeight);
 
-        lineConnect.setTranslateX(-BUFFER / 2);
-        lineConnect.setTranslateY(-BUFFER / 2);
+        lineConnect.setTranslateX(-mapConfig.BUFFER / 2);
+        lineConnect.setTranslateY(-mapConfig.BUFFER / 2);
 
-        lineOverlay.setTranslateX(-BUFFER / 2);
-        lineOverlay.setTranslateY(-BUFFER / 2);
+        lineOverlay.setTranslateX(-mapConfig.BUFFER / 2);
+        lineOverlay.setTranslateY(-mapConfig.BUFFER / 2);
 
         map.getChildren().addAll(lineConnect, lineOverlay, overlay);
         mapEvent();
@@ -155,6 +159,10 @@ public class MapView {
         return dataWrapper.tileIndexs;
     }
 
+    public void setNeedRender(boolean needRender) {
+        this.needRender = needRender;
+    }
+
     public void repaint() {
 
         List<MapFeature>[][] bucketMap = dataWrapper.tileIndexs;
@@ -166,18 +174,18 @@ public class MapView {
         GraphicsContext gcOverlay = lineOverlay.getGraphicsContext2D();
         gcOverlay.clearRect(0, 0, lineOverlay.getWidth(), lineOverlay.getHeight());
 
-        double viewWorldWidth = (ROOT_WIDTH + BUFFER) / zoom;
-        double viewWorldHeight = (ROOT_HEIGHT + BUFFER) / zoom;
+        double viewWorldWidth = (ROOT_WIDTH + mapConfig.BUFFER) / zoom;
+        double viewWorldHeight = (ROOT_HEIGHT + mapConfig.BUFFER) / zoom;
 
-        double minWorldX = cameraX - BUFFER / 2;
-        double minWorldY = cameraY - BUFFER / 2;
-        double maxWorldX = cameraX + viewWorldWidth + BUFFER / 2;
-        double maxWorldY = cameraY + viewWorldHeight + BUFFER / 2;
+        double minWorldX = cameraX - mapConfig.BUFFER / 2;
+        double minWorldY = cameraY - mapConfig.BUFFER / 2;
+        double maxWorldX = cameraX + viewWorldWidth + mapConfig.BUFFER / 2;
+        double maxWorldY = cameraY + viewWorldHeight + mapConfig.BUFFER / 2;
 
-        int minTileX = (int) (minWorldX / TILE_WIDTH);
-        int maxTileX = (int) (maxWorldX / TILE_WIDTH);
-        int minTileY = (int) (minWorldY / TILE_HEIGHT);
-        int maxTileY = (int) (maxWorldY / TILE_HEIGHT);
+        int minTileX = (int) (minWorldX / mapConfig.TILE_WIDTH);
+        int maxTileX = (int) (maxWorldX / mapConfig.TILE_WIDTH);
+        int minTileY = (int) (minWorldY / mapConfig.TILE_HEIGHT);
+        int maxTileY = (int) (maxWorldY / mapConfig.TILE_HEIGHT);
         // System.out.println(minTileX + " " + maxTileX + " " + minTileY + " " +
         // maxTileY);
         minTileX = Math.max(0, minTileX);
@@ -207,8 +215,8 @@ public class MapView {
             for (SnapContext snap : snapContexts) {
                 if (routingLine)
                     break;
-                int tileX = (int) (snap.getX() / TILE_WIDTH);
-                int tileY = (int) (snap.getY() / TILE_HEIGHT);
+                int tileX = (int) (snap.getX() / mapConfig.TILE_WIDTH);
+                int tileY = (int) (snap.getY() / mapConfig.TILE_HEIGHT);
                 if (tileX <= maxTileX && tileX >= minTileX && tileY >= minTileY && tileY <= maxTileY) {
                     double x = (snap.getX() + 512 - cameraX) * zoom;
                     double y = (snap.getY() + 512 - cameraY) * zoom;
@@ -244,9 +252,9 @@ public class MapView {
                                 gc,
                                 cameraX,
                                 cameraY,
-                                zoom, getGraphStorage());
+                                zoom, getGraphStorage(), mapConfig);
 
-                        feature.drawLabel(gcOverlay, cameraX, cameraY, zoom, getGraphStorage());
+                        feature.drawLabel(gcOverlay, cameraX, cameraY, zoom, getGraphStorage(), mapConfig);
                     }
                 }
 
@@ -307,24 +315,24 @@ public class MapView {
             dragAccumX += dx;
             dragAccumY += dy;
 
-            if (Math.abs(dragAccumX) >= TILE_WIDTH * 2 ||
-                    Math.abs(dragAccumY) >= TILE_HEIGHT * 2) {
+            if (Math.abs(dragAccumX) >= mapConfig.TILE_WIDTH * 2 ||
+                    Math.abs(dragAccumY) >= mapConfig.TILE_HEIGHT * 2) {
 
                 cameraX -= dragAccumX / zoom;
                 cameraY -= dragAccumY / zoom;
 
                 clampCamera();
 
-                lineConnect.setTranslateX(-BUFFER / 2);
-                lineConnect.setTranslateY(-BUFFER / 2);
+                lineConnect.setTranslateX(-mapConfig.BUFFER / 2);
+                lineConnect.setTranslateY(-mapConfig.BUFFER / 2);
 
-                lineOverlay.setTranslateX(-BUFFER / 2);
-                lineOverlay.setTranslateY(-BUFFER / 2);
+                lineOverlay.setTranslateX(-mapConfig.BUFFER / 2);
+                lineOverlay.setTranslateY(-mapConfig.BUFFER / 2);
 
                 dragAccumX = 0;
                 dragAccumY = 0;
 
-                repaint();
+                needRender = true;
 
             }
 
@@ -342,11 +350,11 @@ public class MapView {
             g.setFill(Color.RED);
             g.fillOval(clicked.getX(), clicked.getY(), 4, 4);
 
-            double xRatio = wx / worldWidth;
-            double yRatio = wy / worldHeight;
+            double xRatio = wx / mapConfig.worldWidth;
+            double yRatio = wy / mapConfig.worldHeight;
 
-            double wLon = xRatio * (maxLon - minLon) + minLon;
-            double wLat = (yRatio * (maxLat - minLat) - maxLat) * -1;
+            double wLon = xRatio * (mapConfig.maxLon - mapConfig.minLon) + mapConfig.minLon;
+            double wLat = (yRatio * (mapConfig.maxLat - mapConfig.minLat) - mapConfig.maxLat) * -1;
 
             double half = 256;
             double minX = wx - half;
@@ -386,9 +394,7 @@ public class MapView {
                             continue;
 
                         int wayflags = feature.getWayflags();
-                        if ((wayflags & WayFlags.FOOTWAY.getValue()) != 0
-                                || (wayflags & WayFlags.BUILDING.getValue()) != 0) {
-
+                        if (shouldSkip(wayflags, MapConfig.currentVehicleType)) {
                             continue;
                         }
 
@@ -433,8 +439,14 @@ public class MapView {
                             double dist2 = dxScreen * dxScreen + dyScreen * dyScreen;
 
                             if (dist2 <= ((threshold / 2) * (threshold / 2))) {
+                                // for (WayFlags f : WayFlags.values()) {
+                                // if ((feature.getWayflags() & f.getValue()) != 0) {
+                                // System.out.println(f.name());
+                                // }
+                                // }
+                                // if (feature instanceof RoadFeature r)
+                                // System.out.println(r.getHighwayWidth());
 
-                                System.out.println(feature.getName());
                                 double distA = 0;
                                 double distB = 0;
                                 int nearest1 = aIndex;
@@ -485,7 +497,10 @@ public class MapView {
                                         nearest2, offset1, offset2, len1, len2);
 
                                 snapContexts.add(result);
-                                onPlaceMarker.accept(feature.getName());
+                                if (feature.getName() == null)
+                                    onPlaceMarker.accept(wLat + " " + wLon);
+                                else
+                                    onPlaceMarker.accept(feature.getName());
                                 return;
                             }
 
@@ -495,6 +510,7 @@ public class MapView {
             }
 
         });
+
         map.setOnScroll(e -> {
             isScrolling = true;
             scrollAccumulator += e.getDeltaY();
@@ -520,13 +536,15 @@ public class MapView {
             // tri cu nen camera van can phan
             // dich them dragAccum tuc la tinh tu vi tri -BUFFER/2 den translate hien tai
 
-            double worldXBefore = cameraX + (mouseX - dragAccumX + BUFFER / 2) / oldZoom - BUFFER / 2;
-            double worldYBefore = cameraY + (mouseY - dragAccumY + BUFFER / 2) / oldZoom - BUFFER / 2;
+            double worldXBefore = cameraX + (mouseX - dragAccumX + mapConfig.BUFFER / 2) / oldZoom
+                    - mapConfig.BUFFER / 2;
+            double worldYBefore = cameraY + (mouseY - dragAccumY + mapConfig.BUFFER / 2) / oldZoom
+                    - mapConfig.BUFFER / 2;
 
             updateZoom();
 
-            double worldXAfter = cameraX + (mouseX - dragAccumX + BUFFER / 2) / zoom - BUFFER / 2;
-            double worldYAfter = cameraY + (mouseY - dragAccumY + BUFFER / 2) / zoom - BUFFER / 2;
+            double worldXAfter = cameraX + (mouseX - dragAccumX + mapConfig.BUFFER / 2) / zoom - mapConfig.BUFFER / 2;
+            double worldYAfter = cameraY + (mouseY - dragAccumY + mapConfig.BUFFER / 2) / zoom - mapConfig.BUFFER / 2;
 
             cameraX += worldXBefore - worldXAfter;
             cameraY += worldYBefore - worldYAfter;
@@ -539,16 +557,44 @@ public class MapView {
         });
     }
 
+    public boolean shouldSkip(int wayflags, VehicleType vehicle) {
+        switch (vehicle) {
+            case CAR:
+                return (wayflags & WayFlags.BUILDING.getValue()) != 0
+                        || (wayflags & WayFlags.FOOTWAY.getValue()) != 0
+                        || (wayflags & WayFlags.ACCESS_NO.getValue()) != 0
+                        || (wayflags & WayFlags.VEHICLE_NO.getValue()) != 0
+                        || (wayflags & WayFlags.PRIVATE.getValue()) != 0
+                        || (wayflags & WayFlags.MOTORCAR_NO.getValue()) != 0
+                        || (wayflags & WayFlags.FEE.getValue()) != 0; // ví dụ không đi đường thu phí
+            case MOTORCYCLE:
+                return (wayflags & WayFlags.BUILDING.getValue()) != 0
+                        || (wayflags & WayFlags.FOOTWAY.getValue()) != 0
+                        || (wayflags & WayFlags.ACCESS_NO.getValue()) != 0
+                        || (wayflags & WayFlags.MOTORCYCLE_NO.getValue()) != 0;
+            case PSV: // PSV
+                return (wayflags & WayFlags.BUILDING.getValue()) != 0
+                        || (wayflags & WayFlags.FOOTWAY.getValue()) != 0
+                        || (wayflags & WayFlags.ACCESS_NO.getValue()) != 0
+                        || (wayflags & WayFlags.VEHICLE_NO.getValue()) != 0
+                        || (wayflags & WayFlags.PRIVATE.getValue()) != 0
+                        || (wayflags & WayFlags.PSV_NO.getValue()) != 0
+                        || (wayflags & WayFlags.FEE.getValue()) != 0;
+            default:
+                return true; // an toàn
+        }
+    }
+
     private void clampCamera() {
 
-        double viewWorldWidth = (ROOT_WIDTH + BUFFER) / zoom;
-        double viewWorldHeight = (ROOT_HEIGHT + BUFFER) / zoom;
+        double viewWorldWidth = (ROOT_WIDTH + mapConfig.BUFFER) / zoom;
+        double viewWorldHeight = (ROOT_HEIGHT + mapConfig.BUFFER) / zoom;
 
-        double minCameraX = Math.min(0, worldWidth - viewWorldWidth);
-        double maxCameraX = Math.max(0, worldWidth - viewWorldWidth);
+        double minCameraX = Math.min(0, mapConfig.worldWidth - viewWorldWidth);
+        double maxCameraX = Math.max(0, mapConfig.worldWidth - viewWorldWidth);
 
-        double minCameraY = Math.min(0, worldHeight - viewWorldHeight);
-        double maxCameraY = Math.max(0, worldHeight - viewWorldHeight);
+        double minCameraY = Math.min(0, mapConfig.worldHeight - viewWorldHeight);
+        double maxCameraY = Math.max(0, mapConfig.worldHeight - viewWorldHeight);
 
         cameraX = Math.max(minCameraX, Math.min(cameraX, maxCameraX));
         cameraY = Math.max(minCameraY, Math.min(cameraY, maxCameraY));

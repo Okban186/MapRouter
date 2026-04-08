@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.okban.config.MapConfig;
 import com.okban.dto.OsmDataResult;
 import com.okban.dto.Pair;
 
@@ -44,6 +45,7 @@ public class App extends Application {
     private DataLoadingScreen loadingScreen;
     private List<SnapContext> snapContexts;
     private SelectedPlacesPane selectedPlacesPane;
+    private MapConfig mapConfig;
 
     @Override
     public void start(Stage stage) throws IOException {
@@ -64,6 +66,8 @@ public class App extends Application {
         root = new AnchorPane();
         root.setPrefSize(ROOT_WIDTH, ROOT_HEIGH);
 
+        mapConfig = new MapConfig();
+
         loadingScreen = new DataLoadingScreen();
         snapContexts = new ArrayList<>();
         loadingScreen.createContent(ROOT_WIDTH, ROOT_HEIGH);
@@ -79,6 +83,7 @@ public class App extends Application {
         hideRoute.setLayoutY(100);
         hideRoute.setOnAction(e -> {
             mapView.setRoutingLine(!mapView.getRoutingLine());
+            mapView.setNeedRender(true);
         });
         finding.setOnAction(ed -> {
             GraphStorage graphStorage = osmData.graphStorage;
@@ -117,15 +122,21 @@ public class App extends Application {
         });
         finding.setLayoutX(0);
         finding.setLayoutY(50);
-        mapView = new MapView(1366, 768);
+        mapView = new MapView(1366, 768, mapConfig);
         mapView.setOnPlaceMarker(item -> {
             selectedPlacesPane.addPlace(item);
+        });
+        selectedPlacesPane.setOnHiddenRoutingPath(hidden -> {
+            if (mapView.getRoutingLine()) {
+                mapView.setRoutingLine(hidden);
+                mapView.setNeedRender(true);
+            }
         });
 
         mapView.setSnapContext(snapContexts);
 
         osmFileLoadService = new OsmFileLoadService();
-        routingService = new RoutingService(snapContexts, mapView);
+        routingService = new RoutingService(snapContexts, mapConfig);
 
         mapRoot = (Pane) mapView.createMapView();
         root.getChildren().addAll(mapRoot, finding, hideRoute, selectedPlacesPane, loadingScreen.getRoot());//
@@ -145,7 +156,7 @@ public class App extends Application {
             path = Paths.get(System.getProperty("user.home"), "Documents", "OsmData", "hcm.osm.pbf");
         }
 
-        Task<OsmDataResult> task = osmFileLoadService.processPbfFile(path, mapView);
+        Task<OsmDataResult> task = osmFileLoadService.processPbfFile(path, mapConfig);
         loadingScreen.loadTask(task);
         task.setOnSucceeded(e -> {
             osmData = task.getValue();
