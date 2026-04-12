@@ -16,12 +16,20 @@ public class RoadFeature extends MapFeature {
 
     private HighwayType highwayType;
 
+    //label caching
+    private double ax, ay;
+    private double bx, by;
+    private double degree;
+    private boolean haveLabelCaching = false;
+    private double maxLength = 0;
+
     public RoadFeature(int segmentOffset, int segmentLen, int minLOD, HighwayType highwayType, int layer, int wayflags,
             String name,
             GraphStorage graphStorage) {
 
         super(segmentOffset, segmentLen, minLOD, layer, wayflags, name, graphStorage);
         this.highwayType = highwayType;
+        
 
     }
 
@@ -34,6 +42,11 @@ public class RoadFeature extends MapFeature {
             MapConfig mapConfig) {
         if (segmentLen < 2)
             return;
+
+            if(!haveLabelCaching){
+                buildLabelCache(graphStorage);
+                haveLabelCaching = true;
+        }
         boolean firstPoint = true;
         double lastX = 0;
         double lastY = 0;
@@ -70,109 +83,88 @@ public class RoadFeature extends MapFeature {
         gc.stroke();
         gc.restore();
     }
+private void buildLabelCache(GraphStorage gs) {
 
+    int[] nodes = gs.getShapeNodes();
+
+    double maxLen = 0;
+    int bestA = -1, bestB = -1;
+
+    for (int i = segmentOffset; i < segmentOffset + segmentLen - 1; i++) {
+
+        int a = nodes[i];
+        int b = nodes[i + 1];
+
+        double dx = gs.getNodeX(b) - gs.getNodeX(a);
+        double dy = gs.getNodeY(b) - gs.getNodeY(a);
+
+        double len = dx * dx + dy * dy;
+
+        if (len > maxLen) {
+            maxLen = len;
+            bestA = a;
+            bestB = b;
+        }
+    }
+    maxLength = maxLen;
+    ax = gs.getNodeX(bestA);
+    ay = gs.getNodeY(bestA);
+    bx = gs.getNodeX(bestB);
+    by = gs.getNodeY(bestB);
+
+    double angle = Math.atan2(by - ay, bx - ax);
+double degree = Math.toDegrees(angle);
+
+if (degree > 90 || degree < -90) {
+    degree += 180;
+}
+
+this.degree = degree;
+    
+}
     @Override
-    public void drawLabel(GraphicsContext gc, double cameraX, double cameraY, double zoom, GraphStorage graphStorage,
-            MapConfig mapConfig) {
+    public void drawLabel(GraphicsContext gc, double cameraX, double cameraY, double zoom, GraphStorage graphStorage, MapConfig mapConfig) { 
+      
+    if (name == null || zoom < 1.5) return;
 
-        if (name == null || zoom <= 1.5)
-            return;
+ 
 
-        gc.save();
-        gc.setLineWidth(1);
-        gc.setStroke(Color.AQUA);
-        gc.setFill(Color.RED);
+    double x = (ax + bx) * 0.5;
+    double y = (ay + by) * 0.5;
 
-        double maxLength = 0;
-        int bestAIndex = -1;
-        int bestBIndex = -1;
-        boolean flipped = false;
+    double screenX = (x + mapConfig.BUFFER / 2 - cameraX) * zoom;
+    double screenY = (y + mapConfig.BUFFER / 2 - cameraY) * zoom;
 
-        int shapeNodes[] = graphStorage.getShapeNodes();
+    // culling (QUAN TRỌNG)
+    if (screenX < -200 || screenX > 2000 || screenY < -200 || screenY > 2000)
+        return;
+    
+    double fontSize = 10; 
+    double textWidth = name.length() * (fontSize * 0.55); 
+    double segmentLength = Math.sqrt(maxLength) * zoom; 
+    if (textWidth > segmentLength) { 
+        gc.restore(); 
+        return; 
+    }
+gc.save();
+    gc.setFont(Font.font(10));
+    gc.setFill(Color.BLACK);
 
-        for (int i = segmentOffset; i < segmentLen + segmentOffset - 1; i++) {
+    
 
-            int aIndex = shapeNodes[i];
-            int bIndex = shapeNodes[i + 1];
+    gc.translate(screenX, screenY);
+    gc.rotate(degree);
 
-            double dx = graphStorage.getNodeX(bIndex) - graphStorage.getNodeX(aIndex);
-            double dy = graphStorage.getNodeY(bIndex) - graphStorage.getNodeY(aIndex);
+    // gc.fillText(name, 0, 0);
+    gc.fillText(name, -textWidth / 2, 0);
 
-            double len = dx * dx + dy * dy;
-
-            if (len > maxLength) {
-                maxLength = len;
-                bestAIndex = aIndex;
-                bestBIndex = bIndex;
-            }
-        }
-
-        if (bestAIndex < 0 || bestBIndex < 0) {
-            gc.restore();
-            return;
-        }
-        double fontSize = 11;
-        double textWidth = name.length() * (fontSize * 0.55);
-        double segmentLength = Math.sqrt(maxLength) * zoom;
-
-        if (textWidth > segmentLength * 0.8) {
-            gc.restore();
-            return;
-        }
-
-        double ax = graphStorage.getNodeX(bestAIndex);
-        double ay = graphStorage.getNodeY(bestAIndex);
-        double bx = graphStorage.getNodeX(bestBIndex);
-        double by = graphStorage.getNodeY(bestBIndex);
-
-        double x = (ax + bx) / 2;
-        double y = (ay + by) / 2;
-
-        double dx = bx - ax;
-        double dy = by - ay;
-
-        double angle = Math.toDegrees(Math.atan2(dy, dx));
-
-        if (angle > 90 || angle < -90) {
-            angle += 180;
-            flipped = true;
-        }
-
-        double screenX = (x + mapConfig.BUFFER / 2 - cameraX) * zoom;
-        double screenY = (y + mapConfig.BUFFER / 2 - cameraY) * zoom;
-
-        gc.save();
-        gc.translate(screenX, screenY);
-        gc.rotate(angle);
-
-        gc.setFont(Font.font("Arial", FontWeight.BOLD, fontSize));
-
-        gc.fillText(name, -textWidth / 2, 0);
-
-        if ((wayflags & WayFlags.ONEWAY.getValue()) != 0) {
-            double arrowLen = 12;
-            double arrowWing = 4;
-
-            double dir = flipped ? -1 : 1;
-            double gap = 10;
-            double startX = dir * (textWidth / 2 + gap);
-            double startY = 0;
-
-            gc.strokeLine(
-                    startX, startY,
-                    startX + dir * arrowLen, startY);
-
-            gc.strokeLine(
-                    startX + dir * arrowLen, startY,
-                    startX + dir * (arrowLen - arrowWing), startY - arrowWing);
-
-            gc.strokeLine(
-                    startX + dir * arrowLen, startY,
-                    startX + dir * (arrowLen - arrowWing), startY + arrowWing);
-        }
-
-        gc.restore();
-        gc.restore();
+    // ARROW (nhẹ hơn bạn nghĩ)
+    if ((wayflags & WayFlags.ONEWAY.getValue()) != 0) {
+        gc.strokeLine(20, 0, 35, 0);
+        gc.strokeLine(35, 0, 30, -3);
+        gc.strokeLine(35, 0, 30, 3);
     }
 
+    gc.restore();
+}
 }

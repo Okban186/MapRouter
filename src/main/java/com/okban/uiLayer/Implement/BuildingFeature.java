@@ -63,11 +63,11 @@ public class BuildingFeature extends MapFeature {
             gc.setFill(Color.web("#CBCBCB"));
             gc.fill();
             if ((wayflags & WayFlags.HISTORIC.getValue()) != 0 || (wayflags & WayFlags.TOURISM.getValue()) != 0) {
-                gc.setLineWidth(2);
+                gc.setLineWidth(1);
                 gc.setStroke(Color.web("#0A5C36"));
             }
         } else {
-            gc.setLineWidth(2);
+            gc.setLineWidth(1);
             gc.setStroke(Color.web("#0A5C36"));
         }
 
